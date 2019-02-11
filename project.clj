@@ -5,6 +5,8 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/data.csv "0.1.4"]
+                 [inflections "0.13.2"]
+                 [slingshot "0.12.2"]
                  [org.onlinelinguisticdatabase/old-client "0.1.0"]]
   :main ^:skip-aot dailp-ingest-clj.core
   :target-path "target/%s"
