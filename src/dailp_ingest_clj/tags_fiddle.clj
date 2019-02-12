@@ -1,5 +1,6 @@
 (ns dailp-ingest-clj.tags-fiddle
   (:require [clojure.string :as string]
+            [clj-time.format :as f]
             [old-client.core :refer [make-old-client]]
             [old-client.resources :refer :all]
             [dailp-ingest-clj.old-io :refer :all]
@@ -26,11 +27,9 @@
 
 (comment
 
-  (#{1 2} 11)
+  (keys (ns-publics 'clj-time.format))
 
-  (#{"restricted" "foreign word"} (:name {:name "restricted"}))
-
-  (#{"restricted" "foreign word"} (:name {:name "restzicted"}))
+  (f/show-formatters)
 
   (get-now-iso8601)
 
@@ -53,5 +52,13 @@
   (fetch-upload-tags (get-state))  ;; fetch from GSheets (cache disabled) and upload to OLD
 
   (fetch-upload-tags (get-state) false)  ;; fetch from GSheets (cache enabled) and upload to OLD
+
+  (-> (fetch-upload-tags (get-state) false)
+      :tags
+      keys)
+
+  (->> (fetch-upload-tags (get-state) false)
+       :tags
+       (map (fn [[key {:keys [id]}]] [key id])))
 
 )

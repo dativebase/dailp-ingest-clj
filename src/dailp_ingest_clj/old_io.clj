@@ -8,5 +8,9 @@
   ([old-client]
    {:old-client old-client
     :created_pronominal_prefixes []
-    :warnings {}}))
+    :warnings {}
+    :tags {}
+    :syntactic-categories {}
+    :sources-categories {}
+    }))
 

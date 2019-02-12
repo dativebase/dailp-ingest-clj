@@ -20,7 +20,7 @@
 
 (defn get-now-iso8601
   []
-  (f/unparse (f/formatters :basic-date-time) (get-now)))
+  (f/unparse (f/formatters :date-time) (get-now)))
 
 (defn get-ingest-tag-name
   []
@@ -37,13 +37,13 @@
 
 (defn update-tag
   "Update the tag matching tag-map by name. Return a 2-element
-  attempt vector."
+  attempt vector where the first element (in the success case) is the tag map."
   [state tag-map]
-  (let [existing-tag
+  (let [existing-tags
         (fetch-resources (:old-client state) :tag)
         tag-to-update
         (first (filter #(= (:name tag-map) (:name %))
-                       existing-tag))]
+                       existing-tags))]
     (try+
      [(update-resource (:old-client state) :tag (:id tag-to-update)
                        tag-map)
@@ -52,9 +52,7 @@
        (if-let [error (-> body json-parse :error)]
          (if (= error (str "The update request failed because the submitted"
                            " data were not new."))
-           [(format (str "Update not required for tag '%s': it already"
-                         " exists in its desired state.")
-                    (:name tag-map)) nil]
+           [tag-to-update nil]
            [nil (format (str "Unexpected 'error' message when updating tag"
                              " '%s': '%s'.")
                         (:name tag-map)
@@ -69,11 +67,11 @@
 
 (defn create-tag
   "Create a tag from tag-map. Update an existing tag if one already exists with
-  the specified name. In all cases, return a 2-element attempt vector."
+  the specified name. In all cases, return a 2-element attempt vector where the
+  first element (in the success case) is the tag map."
   [state tag-map]
   (try+
-   (create-resource (:old-client state) :tag tag-map)
-   [(format "Created tag '%s'." (:name tag-map)) nil]
+   [(create-resource (:old-client state) :tag tag-map) nil]
    (catch [:status 400] {:keys [body]}
      (if-let [name-error (-> body json-parse :errors :name)]
        (update-tag state tag-map)
@@ -85,6 +83,7 @@
            err)])))
 
 (defn create-ingest-tag
+  "Create the unique tag for this ingest. Its name contains a timestamp."
   [state]
   (create-tag state (get-ingest-tag-map)))
 
@@ -97,6 +96,7 @@
         csv-data->maps) nil])
 
 (defn fetch-all-tags
+  "Fetch the tags from the GSheet and also the ingest tag."
   [disable-cache]
   (let [fetched (fetch-tags-from-worksheet disable-cache)]
     [(conj (first fetched) (get-ingest-tag-map)) nil]))
@@ -106,9 +106,30 @@
   [state tags]
   (seq-rets->ret (map (partial create-tag state) tags)))
 
+(defn get-tag-key
+  "Return a map key for the tag: usually its name as a keyword, but ingest tag
+  is special."
+  [tag]
+  (let [tag-name (:name tag)]
+    (if (string/starts-with? tag-name ingest-tag-namespace)
+      :ingest-tag (keyword tag-name))))
+
+(defn tags-seq->map
+  "Convert a seq of tag maps to a map from generated tag keys to tag maps."
+  [tags-list]
+  (into {} (map (fn [t] [(get-tag-key t) t]) tags-list)))
+
+(defn update-state-tags
+  "Update state map's :tags map with the tags in uploaded-tags-ret."
+  [state uploaded-tags-ret]
+  (let [current-tags (:tags state)]
+    (assoc state :tags (merge current-tags (tags-seq->map uploaded-tags-ret)))))
+
 (defn fetch-upload-tags
+  "Fetch tags from GSheets, upload them to OLD, return state map with :tags submap
+  updated."
   ([state] (fetch-upload-tags state true))
   ([state disable-cache]
-   (apply-or-error
-    (partial upload-tags state)
-    (fetch-all-tags disable-cache))))
+   (->> (fetch-all-tags disable-cache)
+        (apply-or-error (partial upload-tags state))
+        (apply-or-error (partial update-state-tags state)))))
