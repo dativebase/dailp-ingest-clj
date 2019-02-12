@@ -5,13 +5,10 @@
             [old-client.resources :refer [create-resource update-resource fetch-resources]]
             [old-client.models :refer [syntactic-category]]
             [old-client.utils :refer [json-parse]]
-            [dailp-ingest-clj.utils :refer [strip str->kw
-                                            seq-rets->ret
-                                            err->>
+            [dailp-ingest-clj.utils :refer [seq-rets->ret
                                             apply-or-error
                                             csv-data->maps]]
-            [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
-            [dailp-ingest-clj.old-io :refer [get-state]])
+            [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]])
   (:use [slingshot.slingshot :only [throw+ try+]]))
 
 (def syntactic-categories-sheet-name "DAILP Syntactic Categories")
