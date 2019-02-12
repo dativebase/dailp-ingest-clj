@@ -23,14 +23,12 @@
 
 (comment
 
-  (delete-orthographies)
+  (delete-orthographies)  ;; in the OLD instance
 
-  (fetch-orthographies)
+  (fetch-orthographies)  ;; from the OLD instance
 
-  (extract-upload-orthographies (get-state))
+  (fetch-upload-orthographies (get-state))  ;; from GSheets, upload to OLD
 
-  (first (extract-upload-orthographies (get-state)))
-
-  (second (extract-upload-orthographies (get-state)))
+  (fetch-upload-orthographies (get-state) false)  ;; from GSheets with cacheing, upload to OLD
 
 )

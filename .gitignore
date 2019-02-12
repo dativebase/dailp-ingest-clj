@@ -11,3 +11,5 @@ pom.xml.asc
 .hgignore
 .hg/
 private/
+secrets/
+resources/DAILP-Ingest-6bd06f34c7c6.json

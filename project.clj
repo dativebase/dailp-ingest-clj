@@ -7,7 +7,10 @@
                  [org.clojure/data.csv "0.1.4"]
                  [inflections "0.13.2"]
                  [slingshot "0.12.2"]
-                 [org.onlinelinguisticdatabase/old-client "0.1.0"]]
+                 [org.onlinelinguisticdatabase/old-client "0.1.0"]
+                 [com.google.api-client/google-api-client "1.21.0"]
+                 [com.google.gdata/gdata-core "1.0"]
+                 [com.google.gdata/gdata-spreadsheet "3.0"]]
   :main ^:skip-aot dailp-ingest-clj.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})

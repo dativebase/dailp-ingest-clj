@@ -10,11 +10,16 @@
                                             seq-rets->ret
                                             err->>
                                             apply-or-error]]
+            [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
             [dailp-ingest-clj.old-io :refer [get-state]]
             [clojure.data.csv :as csv])
   (:use [slingshot.slingshot :only [throw+ try+]]))
 
 (def orthographies-file-path "resources/private/orthographies.csv")
+
+(def orthographies-sheet-name "Orthographic Inventories")
+
+(def orthographies-worksheet-name "Sheet1")
 
 ;; For ordering the graphs of each orthography.
 (def orthography-segment-order
@@ -132,6 +137,11 @@
   (with-open [reader (io/reader csv-path)]
     (->> (csv/read-csv reader)
          pure-processor)))
+
+(defn tmp
+  [csv-path]
+  (with-open [reader (io/reader csv-path)]
+    (seq (csv/read-csv reader))))
 
 (defn orthographies-csv->row-maps
   "Parse the orthographies CSV file and return a map for each row.
@@ -287,3 +297,21 @@
   (apply-or-error
    (partial upload-orthographies state)
    (extract-orthographies orthographies-file-path)))
+
+(defn fetch-orthographies-from-worksheet
+  [disable-cache]
+  [(-> (fetch-worksheet-caching {:spreadsheet orthographies-sheet-name
+                                 :worksheet orthographies-worksheet-name}
+                                disable-cache)
+       csv-data->maps
+       orthographies-csv->row-maps
+       row-maps->rsrc-maps) nil])
+
+(defn fetch-upload-orthographies
+  "Fetch the orthographies from Google Sheets and upload them to an OLD
+  instance. Should return a message string for each orthography upload attempt."
+  ([state] (fetch-upload-orthographies state true))
+  ([state disable-cache]
+   (apply-or-error
+    (partial upload-orthographies state)
+    (fetch-orthographies-from-worksheet disable-cache))))
