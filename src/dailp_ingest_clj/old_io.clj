@@ -11,6 +11,4 @@
     :warnings {}
     :tags {}
     :syntactic-categories {}
-    :sources-categories {}
-    }))
-
+    :sources {}}))

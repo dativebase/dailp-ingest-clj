@@ -116,8 +116,8 @@
 
 (defn tags-seq->map
   "Convert a seq of tag maps to a map from generated tag keys to tag maps."
-  [tags-list]
-  (into {} (map (fn [t] [(get-tag-key t) t]) tags-list)))
+  [tags-seq]
+  (into {} (map (fn [t] [(get-tag-key t) t]) tags-seq)))
 
 (defn update-state-tags
   "Update state map's :tags map with the tags in uploaded-tags-ret."

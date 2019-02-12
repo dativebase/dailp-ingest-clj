@@ -32,9 +32,7 @@
        (if-let [error (-> body json-parse :error)]
          (if (= error (str "The update request failed because the submitted"
                            " data were not new."))
-           [(format (str "Update not required for syntactic category '%s': it already"
-                         " exists in its desired state.")
-                    (:name syntactic-category-map)) nil]
+           [sc-to-update nil]
            [nil (format (str "Unexpected 'error' message when updating syntactic category"
                              " '%s': '%s'.")
                         (:name syntactic-category-map)
@@ -53,8 +51,8 @@
   cases, return a 2-element attempt vector."
   [state syntactic-category-map]
   (try+
-   (create-resource (:old-client state) :syntactic-category syntactic-category-map)
-   [(format "Created syntactic category '%s'." (:name syntactic-category-map)) nil]
+   [(create-resource (:old-client state) :syntactic-category
+                     syntactic-category-map) nil]
    (catch [:status 400] {:keys [body]}
      (if-let [name-error (-> body json-parse :errors :name)]
        (update-syntactic-category state syntactic-category-map)
@@ -80,12 +78,28 @@
        csv-data->maps
        (map (fn [sc] (merge syntactic-category sc)))) nil])
 
+(defn get-sc-key
+  "Return a map key for the syntactic category sc."
+  [sc] (-> sc :name keyword))
+
+(defn scs-seq->map
+  [scs-seq]
+  (into {} (map (fn [sc] [(get-sc-key sc) sc]) scs-seq)))
+
+(defn update-state-scs 
+  "Update state map's :syntactic-categories map with the syntactic categories
+  in uploaded-scs-ret."
+  [state uploaded-scs-ret]
+  (let [current-scs (:syntactic-categories state)]
+    (assoc state :syntactic-categories
+           (merge current-scs (scs-seq->map uploaded-scs-ret)))))
+
 (defn fetch-upload-syntactic-categories
   "Fetch the syntactic-categories from Google Sheets and upload them to an OLD
   instance. Should return a message string for each syntactic category upload
   attempt."
   ([state] (fetch-upload-syntactic-categories state true))
   ([state disable-cache]
-   (apply-or-error
-    (partial upload-syntactic-categories state)
-    (fetch-syntactic-categories-from-worksheet disable-cache))))
+   (->> (fetch-syntactic-categories-from-worksheet disable-cache)
+        (apply-or-error (partial upload-syntactic-categories state))
+        (apply-or-error (partial update-state-scs state)))))
