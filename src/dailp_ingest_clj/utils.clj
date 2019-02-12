@@ -1,5 +1,7 @@
 (ns dailp-ingest-clj.utils
-  (:require [clojure.string :as string]))
+  (:require [clojure.java.io :as io]
+            [clojure.string :as string]
+            [clojure.data.csv :as csv]))
 
 (defn starts-with-any?
   "Return truthy if s starts with any character in chrs; otherwise nil."
@@ -74,6 +76,32 @@
   [rets]
   (let [errs (filter some? (map second rets))]
     (if (seq errs) [nil errs] [(map first rets) nil])))
+
+(defn csv-data->maps
+  "Convert a vector of vectors of strings (csv reader output) to a seq of maps;
+  assumes first vector of strings is the header row of the CSV, which supplies
+  keys for the resulting maps. This::
+
+      (csv-data->maps [[a b] [1 2] [3 4]])
+
+   becomes:
+
+      ({a 1 b 2} {a 3 b 4})
+  ."
+  [csv-data]
+  (map zipmap
+       (->> (first csv-data) ;; First row is the header
+            (map (fn [x] (str->kw x)))
+            repeat)
+       (rest csv-data)))
+
+(defn read-csv-io
+  "Read the CSV file at csv-path, producing a lazy vector of strings, and
+  return the result of running pure-processor on the input lazy vector."
+  [csv-path pure-processor]
+  (with-open [reader (io/reader csv-path)]
+    (->> (csv/read-csv reader)
+         pure-processor)))
 
 (comment
 

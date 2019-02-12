@@ -9,7 +9,9 @@
             [dailp-ingest-clj.utils :refer [strip str->kw
                                             seq-rets->ret
                                             err->>
-                                            apply-or-error]]
+                                            apply-or-error
+                                            csv-data->maps
+                                            read-csv-io]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
             [dailp-ingest-clj.old-io :refer [get-state]]
             [clojure.data.csv :as csv])
@@ -102,24 +104,6 @@
    "labiovelar glide"
    "bilabial nasal"])
 
-(defn csv-data->maps
-  "Convert a vector of vectors of strings (csv reader output) to a seq of maps;
-  assumes first vector of strings is the header row of the CSV, which supplies
-  keys for the resulting maps. This::
-
-      (csv-data->maps [[a b] [1 2] [3 4]])
-
-   becomes:
-
-      ({a 1 b 2} {a 3 b 4})
-  ."
-  [csv-data]
-  (map zipmap
-       (->> (first csv-data) ;; First row is the header
-            (map (fn [x] (str->kw x)))
-            repeat)
-       (rest csv-data)))
-
 (defn fix-segment
   "Return a new copy of orthography by removing the newlines, double quotes and
   spaces from the :segment value."
@@ -129,14 +113,6 @@
          (-> (:segment orthography)
              (string/replace "\n" "")
              (strip " \""))))
-
-(defn read-csv-io
-  "Read the Orthographies CSV file, producing a lazy vector of strings, and
-  return the result of running pure-processor on the input lazy vector."
-  [csv-path pure-processor]
-  (with-open [reader (io/reader csv-path)]
-    (->> (csv/read-csv reader)
-         pure-processor)))
 
 (defn tmp
   [csv-path]
