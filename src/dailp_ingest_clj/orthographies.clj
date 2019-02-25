@@ -10,7 +10,7 @@
                                             seq-rets->ret
                                             err->>
                                             apply-or-error
-                                            csv-data->maps
+                                            table->sec-of-maps
                                             read-csv-io]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
             [dailp-ingest-clj.old-io :refer [get-state]]
@@ -202,7 +202,7 @@
   a seq of resource maps that can be uploaded via HTTP request to an OLD."
   [csv]
   (-> csv
-      csv-data->maps
+      table->sec-of-maps
       orthographies-csv->row-maps
       row-maps->rsrc-maps))
 
@@ -279,7 +279,7 @@
   [(-> (fetch-worksheet-caching {:spreadsheet orthographies-sheet-name
                                  :worksheet orthographies-worksheet-name}
                                 disable-cache)
-       csv-data->maps
+       table->sec-of-maps
        orthographies-csv->row-maps
        row-maps->rsrc-maps) nil])
 

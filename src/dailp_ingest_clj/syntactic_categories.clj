@@ -7,7 +7,7 @@
             [old-client.utils :refer [json-parse]]
             [dailp-ingest-clj.utils :refer [seq-rets->ret
                                             apply-or-error
-                                            csv-data->maps]]
+                                            table->sec-of-maps]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]])
   (:use [slingshot.slingshot :only [throw+ try+]]))
 
@@ -72,10 +72,12 @@
 (defn fetch-syntactic-categories-from-worksheet
   "Fetch the syntactic categories from the Google Sheets worksheet."
   [disable-cache]
-  [(->> (fetch-worksheet-caching {:spreadsheet syntactic-categories-sheet-name
-                                  :worksheet syntactic-categories-worksheet-name}
+  [(->> (fetch-worksheet-caching {:spreadsheet-title syntactic-categories-sheet-name
+                                  :worksheet-title syntactic-categories-worksheet-name
+                                  :max-col 3
+                                  :max-row 8}
                                  disable-cache)
-       csv-data->maps
+       table->sec-of-maps
        (map (fn [sc] (merge syntactic-category sc)))) nil])
 
 (defn get-sc-key

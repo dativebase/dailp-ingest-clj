@@ -53,6 +53,20 @@
 
   (fetch-upload-tags (get-state) false)  ;; fetch from GSheets (cache enabled) and upload to OLD
 
+  (map? "abc")
+
+  (get {:a 2} :a "dog")
+
+  (if (seq "") "y" "n")
+
+  (empty? "ab")
+
+  (if-let [a nil] a "frog")
+
+  (if-let [a false] a "frog")
+
+  (empty? "")
+
   (-> (fetch-upload-tags (get-state) false)
       :tags
       keys)

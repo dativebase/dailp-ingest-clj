@@ -63,24 +63,51 @@
                                  title))))))
 
 (defn get-cells
-  [service worksheet]
+  [service worksheet min-col max-col min-row max-row]
   (map
    (memfn getCell)
-   (.getEntries (.getFeed service (.getCellFeedUrl worksheet) CellFeed))))
+   (.getEntries (.getFeed
+                 service
+                 ;; (str (.getCellFeedUrl worksheet) "?return-empty=true")
+                 ;; (.getCellFeedUrl worksheet)
+                 (.toURL
+                  (java.net.URI.
+                   (format
+                    (str (.toString (.getCellFeedUrl worksheet))
+                         "?return-empty=true"
+                         "&min-col=%s"
+                         "&max-col=%s"
+                         "&min-row=%s"
+                         "&max-row=%s")
+                    min-col
+                    max-col
+                    min-row
+                    max-row)))
+                   CellFeed))))
 
 (defn to-nested-vec
   [cells]
   (mapv (partial mapv (memfn getValue)) (partition-by (memfn getRow) cells)))
 
 (defn fetch-worksheet
-  ([config] (fetch-worksheet (init-service) config))
-  ([service {spreadsheet-title :spreadsheet worksheet-title :worksheet}]
-   (if-let [spreadsheet (find-spreadsheet-by-title service spreadsheet-title)]
-     (if-let [worksheet (find-worksheet-by-title service spreadsheet worksheet-title)]
-       (to-nested-vec (get-cells service worksheet))
-       (throw (Exception. (format "Spreadsheet '%s' has no worksheet '%s'"
-                                  spreadsheet-title worksheet-title))))
-     (throw (Exception. (format "Spreadsheet '%s' not found" spreadsheet-title))))))
+  [& {:keys [service
+             spreadsheet-title
+             worksheet-title
+             min-col
+             max-col
+             min-row
+             max-row]
+      :or {service (init-service)
+           min-col 1
+           max-col 30
+           min-row 1
+           max-row 1000}}]
+  (if-let [spreadsheet (find-spreadsheet-by-title service spreadsheet-title)]
+    (if-let [worksheet (find-worksheet-by-title service spreadsheet worksheet-title)]
+      (to-nested-vec (get-cells service worksheet min-col max-col min-row max-row))
+      (throw (Exception. (format "Spreadsheet '%s' has no worksheet '%s'"
+                                 spreadsheet-title worksheet-title))))
+    (throw (Exception. (format "Spreadsheet '%s' not found" spreadsheet-title)))))
 
 ;; Atom for caching the results of making an API network request to
 ;; Google Sheets.
@@ -93,11 +120,11 @@
   ([config] (fetch-worksheet-caching config false))
   ([config disable-cache]
    (if disable-cache
-     (let [ret (fetch-worksheet config)]
+     (let [ret (apply fetch-worksheet (-> config seq flatten))]
        (swap! worksheet-cache assoc config ret)
        ret)
      (if-let [e (find @worksheet-cache config)]
        (val e)
-       (let [ret (fetch-worksheet config)]
+       (let [ret (apply fetch-worksheet (-> config seq flatten))]
          (swap! worksheet-cache assoc config ret)
          ret)))))

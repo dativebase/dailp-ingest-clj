@@ -6,7 +6,7 @@
             [clj-time.format :as f]
             [dailp-ingest-clj.utils :refer [seq-rets->ret
                                             apply-or-error
-                                            csv-data->maps]]
+                                            table->sec-of-maps]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]])
   (:use [slingshot.slingshot :only [throw+ try+]]))
 
@@ -90,10 +90,12 @@
 (defn fetch-tags-from-worksheet
   "Fetch the tags from the Google Sheets worksheet."
   [disable-cache]
-  [(->> (fetch-worksheet-caching {:spreadsheet tags-sheet-name
-                                  :worksheet tags-worksheet-name}
+  [(->> (fetch-worksheet-caching {:spreadsheet-title tags-sheet-name
+                                  :worksheet-title tags-worksheet-name
+                                  :max-col 2
+                                  :max-row 17}
                                  disable-cache)
-        csv-data->maps) nil])
+        table->sec-of-maps) nil])
 
 (defn fetch-all-tags
   "Fetch the tags from the GSheet and also the ingest tag."
@@ -115,7 +117,7 @@
       :ingest-tag (keyword tag-name))))
 
 (defn tags-seq->map
-  "Convert a seq of tag maps to a map from generated tag keys to tag maps."
+  "Convert a seq of tag maps to a mapping from generated tag keys to tag maps."
   [tags-seq]
   (into {} (map (fn [t] [(get-tag-key t) t]) tags-seq)))
 

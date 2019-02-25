@@ -5,6 +5,7 @@
             :url "https://www.eclipse.org/legal/epl-2.0/"}
   :dependencies [[org.clojure/clojure "1.9.0"]
                  [org.clojure/data.csv "0.1.4"]
+                 [org.clojure/test.check "0.9.0"]
                  [clj-time "0.15.0"]
                  [inflections "0.13.2"]
                  [slingshot "0.12.2"]
