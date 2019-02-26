@@ -1,23 +1,22 @@
 (ns dailp-ingest-clj.core
   (:gen-class)
-  (:require [dailp-ingest-clj.orthographies :refer
-             [extract-upload-orthographies]]
-            [old-client.core :refer [make-old-client]]
+  (:require [old-client.core :refer [make-old-client]]
             [dailp-ingest-clj.old-io :refer [get-state]]
-            [dailp-ingest-clj.tags :refer [fetch-upload-tags]]
+            [dailp-ingest-clj.orthographies :refer [fetch-upload-orthographies]]
             [dailp-ingest-clj.syntactic-categories :refer
-             [fetch-upload-syntactic-categories]]))
+             [fetch-upload-syntactic-categories]]
+            [dailp-ingest-clj.tags :refer [fetch-upload-tags]]
+            [dailp-ingest-clj.utils :refer [apply-or-error]]))
 
 (defn ingest
   []
-  (let [state (get-state)]
-    (-> state
-        (fetch-upload-tags state)
-        (fetch-upload-syntactic-categories))))
+  (->> [(get-state) nil]
+       (apply-or-error fetch-upload-orthographies)
+       (apply-or-error fetch-upload-tags)
+       (apply-or-error fetch-upload-syntactic-categories)
+))
 
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
-  (let [state {:old-client (make-old-client)
-               :warnings {}}]
-    (extract-upload-orthographies state)))
+  (ingest))

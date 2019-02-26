@@ -27,8 +27,21 @@
   "Delete all resources of type resource-name."
   [state resource-name]
   (let [client (:old-client state)]
-    (map (fn [rsrc] (delete-resource client resource-name (:id rsrc)))
+    (map (fn [rsrc]
+           (when (not (some #{[:tag "restricted"]
+                              [:tag "foreign word"]}
+                            (list [resource-name (:name rsrc)])))
+             (delete-resource client resource-name (:id rsrc))))
          (fetch-resources (:old-client state) resource-name))))
+
+(defn delete-everything
+  "Delete all resources."
+  [state]
+  (map (fn [rsrc-name] (delete-all-resources state rsrc-name))
+       [:form
+        :tag
+        :orthography
+        :syntactic-category]))
 
 ;; Maps resource keywords to their OLD model string name.
 (def rsrc-kws->names

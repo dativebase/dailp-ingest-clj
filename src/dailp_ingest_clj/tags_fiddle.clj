@@ -41,8 +41,6 @@
 
   (fetch-tags)  ;; from the OLD instance
 
-  (create-ingest-tag (get-state))  ;; in the OLD instance
-
   (fetch-all-tags false)
 
   (fetch-tags-from-worksheet true)  ;; from GSheets, cache disabled

@@ -152,6 +152,13 @@
   [seqthingy]
   (filter identity seqthingy))
 
+(defn kw->human
+  "Convert a keyword like :Dog-Cat to `Dog Cat`."
+  [kw]
+  (-> kw
+      name
+      (string/replace "-" " ")))
+
 (comment
 
   (seq-rets->ret (list))

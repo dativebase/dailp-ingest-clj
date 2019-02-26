@@ -23,9 +23,13 @@
 
 (comment
 
+  (filter #(seq (:segment %)) (list {:segment "a"} {:segment nil} {:a 2}))
+
   (delete-orthographies)  ;; in the OLD instance
 
   (fetch-orthographies)  ;; from the OLD instance
+
+  (fetch-orthographies-from-worksheet true)
 
   (fetch-upload-orthographies (get-state))  ;; from GSheets, upload to OLD
 
