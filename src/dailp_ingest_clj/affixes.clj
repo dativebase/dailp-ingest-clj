@@ -238,7 +238,7 @@
   [state affixes-seq affix-form-maps-kw affix-syncatkey]
   (let [ret (-> (reduce (partial extract-affix-forms-to-agg
                                  affix-form-maps-kw affix-syncatkey)
-                        {:state state  affix-form-maps-kw ()}
+                        {:state state affix-form-maps-kw ()}
                         affixes-seq)
                 (update affix-form-maps-kw seq-rets->ret))]
     (apply-or-error

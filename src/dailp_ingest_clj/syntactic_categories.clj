@@ -35,7 +35,7 @@
   [(->> (fetch-worksheet-caching {:spreadsheet-title syntactic-categories-sheet-name
                                   :worksheet-title syntactic-categories-worksheet-name
                                   :max-col 3
-                                  :max-row 8}
+                                  :max-row 9}
                                  disable-cache)
        table->sec-of-maps
        (map (fn [sc] (merge syntactic-category sc)))) nil])
