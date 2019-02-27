@@ -3,8 +3,10 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.pprint :as pprint]
-            [old-client.resources :refer [create-resource update-resource fetch-resources]]
-            [old-client.models :refer [form]]
+            [old-client.resources :refer [create-resource
+                                          update-resource
+                                          fetch-resources]]
+            [old-client.models :as ocm :refer [form create-form]]
             [old-client.utils :refer [json-parse]]
             [dailp-ingest-clj.utils :refer [strip str->kw
                                             seq-rets->ret
@@ -147,29 +149,29 @@
   of form maps. One spreadsheet row may represent multiple forms because
   multiple allomorphs can be encoded in a single row."
   [affix-map state morpheme-gloss syncatkey]
-  (let [translations [{:transcription (:morpheme-name affix-map)
-                       :grammaticality ""}]
+  (let [translations [{::ocm/transcription (:morpheme-name affix-map)
+                       ::ocm/grammaticality ""}]
         syncat-id (get-in state [:syntactic-categories syncatkey :id])
         comments-getter (syncatkey comments-getters)
         comments (comments-getter affix-map)
         col-tag-pairs (syncatkey prefix-col->tag-idfr)]
-    (filter
-     identity
-     (map
-      (fn [[col-kw tag-kw]]
-        (let [tag-kw (if (map? tag-kw) (syncatkey tag-kw) tag-kw)
-              allomorph (string/trim (or (col-kw affix-map) ""))]
-          (if (empty? allomorph)
-            nil
-            {:transcription allomorph,
-             :morpheme_break allomorph,
-             :morpheme_gloss morpheme-gloss,
-             :translations translations,
-             :syntactic_category syncat-id,
-             :comments comments,
-             :tags [(get-in state [:tags tag-kw :id])
-                    (get-in state [:tags :ingest-tag :id])]})))
-      col-tag-pairs))))
+     (->> (map
+           (fn [[col-kw tag-kw]]
+             (let [tag-kw (if (map? tag-kw) (syncatkey tag-kw) tag-kw)
+                   allomorph (string/trim (or (col-kw affix-map) ""))]
+               (if (empty? allomorph)
+                 nil
+                 (create-form {::ocm/transcription allomorph,
+                               ::ocm/morpheme_break allomorph,
+                               ::ocm/morpheme_gloss morpheme-gloss,
+                               ::ocm/translations translations,
+                               ::ocm/syntactic_category syncat-id,
+                               ::ocm/comments comments,
+                               ::ocm/tags
+                               [(get-in state [:tags tag-kw :id])
+                                (get-in state [:tags :ingest-tag :id])]}))))
+           col-tag-pairs)
+          (filter identity))))
 
 (defn affix-map->seq-of-forms
   "Produce a seq of zero or more forms from a map representing a single affix.
@@ -178,5 +180,5 @@
   [affix-map state & {:keys [syncatkey] :or {syncatkey :PPP}}]
   (let [morpheme-gloss (:tag affix-map)]
      (if (gloss-is-neg morpheme-gloss)  ;; NOTE: ignoring NEG-glossed affixes ...
-       [(list) (update-state-neg-gloss-warnings morpheme-gloss affix-map state)]
+       [() (update-state-neg-gloss-warnings morpheme-gloss affix-map state)]
        [(-affix-map->seq-of-forms affix-map state morpheme-gloss syncatkey) state])))

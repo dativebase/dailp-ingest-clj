@@ -30,70 +30,42 @@
 
 (defn construct-ppp-form-maps
   [state ppps]
-  [(reduce
-    (fn [agg ppp-affix-map]
-      (let [[seq-of-forms new-state]
-            (affix-map->seq-of-forms
-             ppp-affix-map (:state agg) :syncatkey :PPP)]
-        (-> (assoc agg :state new-state)
-            (update :ppp-form-maps
-                    (fn [old-form-maps] (concat old-form-maps seq-of-forms))))))
-    {:state state
-     :ppp-form-maps ()}
-    ppps) nil])
-
-(defn fetch-upload-ppp-forms-DEPRECATED
-  "Fetch PPP forms from GSheets, upload them to OLD, return state map with
-   :created_pronominal_prefixes submap updated."
-  [state]
-  (construct-ppp-form-maps :state state))
-
-(defn update-ppp
-  [state ppp-map]
-  :frogs)
-
-(defn create-ppp
-  "Create a PPP form from ppp-map. Update an existing PPP form if one already
-  exists with the specified name. In all cases, return a 2-element attempt
-  vector where the first element (in the success case) is the ppp map."
-  [state ppp-map]
-  (try+
-   [(create-resource (:old-client state) :form ppp-map) nil]
-   (catch [:status 400] {:keys [body]}
-     (if-let [name-error (-> body json-parse :errors :name)]
-       (update-ppp state ppp-map)
-       [nil (json-parse body)]))
-   (catch Object err
-     [nil (format
-           (str
-            "Unknown error when attempting to create a PPP form with"
-            " transcription '%s' and translation '%s': %s.")
-           (:transcription ppp-map)
-           (-> ppp-map :translations first :transcription)
-           err)])))
-
-(defn create-ppp
-  [state ppp-map]
-  :created-ppp
-  )
+  (let [ret
+        (reduce
+         (fn [agg ppp-affix-map]
+           (let [[seq-of-forms new-state]
+                 (affix-map->seq-of-forms
+                  ppp-affix-map (:state agg) :syncatkey :PPP)]
+             (-> (assoc agg :state new-state)
+                 (update :ppp-form-maps
+                         (fn [old-form-maps]
+                           (concat old-form-maps seq-of-forms))))))
+         {:state state :ppp-form-maps ()}
+         ppps)
+        ret (update ret :ppp-form-maps seq-rets->ret)]
+    (apply-or-error
+     (fn [_] [(update ret :ppp-form-maps first) nil])
+     (:ppp-form-maps ret))))
 
 (defn upload-ppps 
   "Upload the seq of PPP form resource maps (ppps) to an OLD instance."
-  [state ppps]
-  (seq-rets->ret
-   (map (fn [ppp] (upsert-resource state ppp :resource-name :form)) ppps)))
+  [{:keys [state ppp-form-maps]}]
+  (apply-or-error
+   (fn [ppp-forms] [{:state state :ppp-forms ppp-forms} nil])
+   (seq-rets->ret
+    (map (fn [ppp] (upsert-resource state ppp :resource-name :form))
+         ppp-form-maps))))
+
+(defn update-state-ppp-forms
+  [{:keys [state ppp-forms]}]
+  [(assoc state :ppp-forms
+          (into {} (map (fn [f] [(:id f) f]) ppp-forms))) nil])
 
 (defn fetch-upload-ppp-forms
   "Fetch PPP forms from GSheets, upload them to OLD, return state map with
    :created_pronominal_prefixes submap updated."
   [state & {:keys [disable-cache] :or {disable-cache true}}]
-  (let [ret-map
-        (->> (fetch-ppps-from-worksheet :disable-cache disable-cache)
-             (apply-or-error (partial construct-ppp-form-maps state)))]
-    ;; (-> ret-map first :ppp-form-maps)
-    (apply-or-error
-     (partial upload-ppps (-> ret-map first :state))
-     [(-> ret-map first :ppp-form-maps) nil])
-     ;; (apply-or-error (partial update-state-ppp-forms state))
-
-))
+  (->> (fetch-ppps-from-worksheet :disable-cache disable-cache)
+       (apply-or-error (partial construct-ppp-form-maps state))
+       (apply-or-error upload-ppps)
+       (apply-or-error update-state-ppp-forms)))

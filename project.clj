@@ -13,6 +13,8 @@
                  [com.google.api-client/google-api-client "1.21.0"]
                  [com.google.gdata/gdata-core "1.0"]
                  [com.google.gdata/gdata-spreadsheet "3.0"]]
+  :checkout-deps-shares ^:replace [:source-paths :resource-paths :compile-path
+                                   #=(eval leiningen.core.classpath/checkout-deps-paths)]
   :main ^:skip-aot dailp-ingest-clj.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})

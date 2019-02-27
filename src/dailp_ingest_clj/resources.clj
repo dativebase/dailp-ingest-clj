@@ -7,8 +7,11 @@
                                           update-resource
                                           fetch-resources
                                           delete-resource
-                                          search-resources]]
-            [old-client.utils :refer [json-parse]]
+                                          search-resources
+                                          rsrc-kw->path  ;; delete after dev use
+                                          ]]
+            [old-client.models :as ocm]
+            [old-client.utils :refer [json-parse json-stringify]]
             [clj-time.format :as f]
             [dailp-ingest-clj.utils :refer [seq-rets->ret
                                             apply-or-error
@@ -73,7 +76,7 @@
 
 ;; Map resource keywords to their characteristic maps of many-to-one attributes.
 (def m2o-rsrc-attrs
-  {:form {:syntactic_category true}})
+  {:form {::ocm/syntactic_category true}})
 
 (defn get-filter-exprs
   "Return a vector of OLD filter expressions whose coordination should return
@@ -102,6 +105,19 @@
                 resource-map)]
     {:query {:filter ["and" filter-expr]}}))
 
+(defn upsert-resource-test
+  "Upsert the resource. First search for an existing match. If it exists, update
+  it with the current ingest tag. If it does not exist, create it."
+  [state resource-map & {:keys [resource-name]}]
+  (let [ingest-tag-id (get-in state [:tags :ingest-tag :id])]
+    [(get-resource-query resource-name resource-map ingest-tag-id) nil])) 
+
+(defn upsert-err-msg
+  [resource-name matches err]
+  (format
+   "Unknown error when attempting to update %s resource with id '%s': '%s'"
+   resource-name (-> matches first :id) err))
+
 (defn upsert-resource
   "Upsert the resource. First search for an existing match. If it exists, update
   it with the current ingest tag. If it does not exist, create it."
@@ -119,10 +135,15 @@
         (try+
          [(update-resource (:old-client state) resource-name
                            (-> matches first :id) resource-map) nil]
+         (catch [:status 400] {:keys [body]}
+           (if-let [error (-> body json-parse :error)]
+             (if (= error (str "The update request failed because the submitted"
+                               " data were not new."))
+               [(first matches) nil]  ;; this is good: no need to update
+               [nil (upsert-err-msg resource-name matches error)])
+             [nil (upsert-err-msg resource-name matches (json-parse body))]))
          (catch Object err
-           [nil (format
-                 "Unknown error when attempting to update %s resource with id '%s': '%s'"
-                 resource-name (-> matches first :id) err)])))
+           [nil (upsert-err-msg resource-name matches err)])))
       (try+
        [(create-resource (:old-client state) resource-name resource-map) nil]
        (catch Object err
