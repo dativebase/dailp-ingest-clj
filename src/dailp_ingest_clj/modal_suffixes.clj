@@ -1,13 +1,12 @@
 (ns dailp-ingest-clj.modal-suffixes
   "Logic for ingesting DAILP modal suffixes."
-  (:require [dailp-ingest-clj.utils :refer [apply-or-error
-                                            seq-rets->ret
-                                            table->sec-of-maps]]
-            [dailp-ingest-clj.affixes :refer [affix-map->seq-of-forms
+  (:require [dailp-ingest-clj.affixes :refer [affix-map->seq-of-forms
                                               construct-affix-form-maps]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
-            [dailp-ingest-clj.old-io :refer [get-state]]
-            [dailp-ingest-clj.resources :refer [upsert-resource]]))
+            [dailp-ingest-clj.resources :refer [upsert-resource]]
+            [dailp-ingest-clj.utils :refer [apply-or-error
+                                            seq-rets->ret
+                                            table->sec-of-maps]]))
 
 (def mod-sfxs-sheet-name "Modal Suffixes")
 
@@ -25,7 +24,7 @@
 
 (defn construct-mod-sfx-form-maps
   "Return an either whose value is a map whose keys are :state and
-  :mod-sfx-form-maps. The state value may have added warnings added to it. The
+  :mod-sfx-form-maps. The state value may have warnings added to it. The
   MOD suffix value should be a seq of form maps representing modal suffixes."
   [state mod-sfxs]
   (construct-affix-form-maps state mod-sfxs :mod-sfx-form-maps :MOD))

@@ -1,18 +1,12 @@
 (ns dailp-ingest-clj.prepronominal-prefixes
   "Logic for ingesting DAILP prepronominal prefixes."
-  (:require 
-            [old-client.resources :refer [create-resource update-resource fetch-resources]]
-            [old-client.models :refer [form]]
-            [old-client.utils :refer [json-parse]]
+  (:require [dailp-ingest-clj.affixes :refer [affix-map->seq-of-forms
+                                              construct-affix-form-maps]]
+            [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
+            [dailp-ingest-clj.resources :refer [upsert-resource]]
             [dailp-ingest-clj.utils :refer [apply-or-error
                                             seq-rets->ret
-                                            table->sec-of-maps]]
-            [dailp-ingest-clj.affixes :refer [affix-map->seq-of-forms]]
-            [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
-            [dailp-ingest-clj.old-io :refer [get-state]]
-            [dailp-ingest-clj.resources :refer [upsert-resource]]
-            [clojure.data.csv :as csv])
-  (:use [slingshot.slingshot :only [throw+ try+]]))
+                                            table->sec-of-maps]]))
 
 (def ppps-sheet-name "Prepronominal prefixes")
 
@@ -46,6 +40,14 @@
     (apply-or-error
      (fn [_] [(update ret :ppp-form-maps first) nil])
      (:ppp-form-maps ret))))
+
+(defn construct-ppp-form-maps
+  "Return an either whose value is a map whose keys are :state and
+  :ppp-form-maps. The state value may have warnings added to it. The
+  PPP suffix value should be a seq of form maps representing prepronominal
+  suffixes."
+  [state ppps]
+  (construct-affix-form-maps state ppps :ppp-form-maps :PPP))
 
 (defn upload-ppps 
   "Upload the seq of PPP form resource maps (ppps) to an OLD instance."
