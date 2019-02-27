@@ -38,22 +38,40 @@
 
 (defn get-comments-pp [affix-map] [])
 (defn get-comments-refl [affiix-map] [])
-(defn get-comments-mod [affiix-map] [])
 (defn get-comments-cl [affiix-map] [])
+
+(defn quote-mb
+  "Enclose mb in slash quotes."
+  [mb] (format "/%s/" mb))
+
+(defn format-morpheme-break-affix-value
+  "Enclose mb in slash quotes. If there is more than one mb, but the second and
+  subsequent into a parenthesized list. Returns a string. E.g., '-óʔi / -o'
+  becomes '/-óʔi/ (/-o/)'."
+  [mb]
+  (let [[first & others] (->> (string/split mb #"/") (map string/trim))]
+    (if (seq others)
+      (format "%s (%s)" (quote-mb first)
+              (string/join ", " (map quote-mb others)))
+      (quote-mb first))))
 
 (defn extract-text-references
   "Extract a seq of reference strings, each describing a reference to the
   morpheme described by affix-map in the specified text. Note that the values
-  of the affix-map attributes targeted are assumed to be vectors of strings."
+  of the affix-map attributes targeted are assumed to be vectors of strings.
+  Note further that  text-attrs is assumed to be a coll of exactly 4 items, a
+  page reference (pp), a form, a tag (gloss) and a morpheme name (translation)."
   [affix-map text-name text-attrs]
   (->> affix-map
-       ((apply juxt text-attrs))
-       (apply (partial map vector))
-       (filter (fn [[x & _]] ((complement nil?) x)))
+       ((apply juxt text-attrs)) ;; get seq of vectors of same type
+       (map #(if (coll? %) % [%]))  ;; make into vectors if needed
+       (apply (partial map vector))  ;; reorganize to seq of text ref tuples (vectors)
+       (filter (fn [[x & _]] ((complement nil?) x)))  ;; remove any vec whose first el is nil
        (map (fn [[pp form tag morph-name]]
               (format
-               "Compare %s (%s) morpheme /%s/ glossed '%s' and named '%s'."
-               text-name pp form tag morph-name)))))
+               "Compare %s (%s) morpheme %s glossed '%s' and named '%s'."
+               text-name pp (format-morpheme-break-affix-value form) tag
+               morph-name)))))
 
 (defn extract-crg-references
   "Extract a seq of CRG strings, each describing a reference to affix-map in the
@@ -76,15 +94,18 @@
 (defn extract-singleton-comments-fields
   "Return a seq of strings, each documenting a simple attribute-value pair from
   affix-map."
-  [affix-map]
+  [affix-map fields]
   (remove-nils
    (map (fn [[attr attr-name]]
           (when-let [val (attr affix-map)]
             (format "%s: %s." attr-name (string/trim val))))
-        [[:h3-specification "H3 specification"]
-         [:tonicity "tonicity"]
-         [:taoc "TAOC"]
-         [:taoc-tag "TAOC tag"]])))
+        fields)))
+
+(def ppp-fields
+  [[:h3-specification "H3 specification"]
+   [:tonicity "tonicity"]
+   [:taoc "TAOC"]
+   [:taoc-tag "TAOC tag"]])
 
 (defn get-comments-ppp
   "Get a string of comments for a prepronominal prefix (PPP) from."
@@ -92,7 +113,19 @@
   (string/join
    " "
    (concat
-    (extract-singleton-comments-fields affix-map)
+    (extract-singleton-comments-fields affix-map ppp-fields)
+    (extract-crg-references affix-map)
+    (extract-bma-2008-references affix-map))))
+
+(def mod-fields
+  [[:taoc "TAOC"]])
+
+(defn get-comments-mod
+  [affix-map]
+  (string/join
+   " "
+   (concat
+    (extract-singleton-comments-fields affix-map mod-fields)
     (extract-crg-references affix-map)
     (extract-bma-2008-references affix-map))))
 
@@ -139,7 +172,8 @@
                          :MID :refl-pre-vocalic}]]
    :MOD [[:allomorph-1 :mod-pre-consonantal]
          [:allomorph-2 :mod-pre-vocalic]
-         [:allomorph-3 :mod-pre-v]]
+         [:allomorph-3 :mod-pre-v]
+         [:allomorph-4 :mod-pre-v]]  ;; TODO: ask Jeff what tag should be used for this modal suffix
    :CL [[:allomorph-1 :cl-pre-consonantal]
         [:allomorph-2 :cl-pre-vocalic]
         [:allomorph-3 :cl-pre-v]]})
@@ -182,3 +216,31 @@
      (if (gloss-is-neg morpheme-gloss)  ;; NOTE: ignoring NEG-glossed affixes ...
        [() (update-state-neg-gloss-warnings morpheme-gloss affix-map state)]
        [(-affix-map->seq-of-forms affix-map state morpheme-gloss syncatkey) state])))
+
+(defn extract-affix-forms-to-agg
+  "Extract a seq of zero or more affix form maps from affix-map and store them
+  in agg under the affix-key key. The syncatkey is a keyword that identifies
+  the type of affix being extracted."
+  [affix-key syncatkey agg affix-map]
+  (let [[seq-of-forms new-state]
+        (affix-map->seq-of-forms
+         affix-map (:state agg) :syncatkey syncatkey)]
+    (-> (assoc agg :state new-state)
+        (update affix-key
+                (fn [old-form-maps]
+                  (concat old-form-maps seq-of-forms))))))
+
+(defn construct-affix-form-maps
+  "Return an either whose value is a map whose keys are :state and
+  affix-form-maps-kw. The state value may have warnings added to it. The
+  value of affix-form-maps-kw should be a seq of form maps representing
+  affixes of the target type."
+  [state affixes-seq affix-form-maps-kw affix-syncatkey]
+  (let [ret (-> (reduce (partial extract-affix-forms-to-agg
+                                 affix-form-maps-kw affix-syncatkey)
+                        {:state state  affix-form-maps-kw ()}
+                        affixes-seq)
+                (update affix-form-maps-kw seq-rets->ret))]
+    (apply-or-error
+     (fn [_] [(update ret affix-form-maps-kw first) nil])
+     (affix-form-maps-kw ret))))
