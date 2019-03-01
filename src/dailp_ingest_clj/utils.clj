@@ -68,7 +68,7 @@
 (defn weird->hyphen
   "Replace all 'weird' chars with a hyphen."
   [thing]
-  (string/replace thing #"(_|\s)+" "-"))
+  (string/replace thing #"(\.|_|\s)+" "-"))
 
 (defn clean-for-kw
   "Clean an externally generated string so that it can be used as a keyword."
@@ -76,15 +76,42 @@
   (-> str-th
       string/trim
       string/lower-case
-      (string/replace #"," "")
-      weird->hyphen))
+      (string/replace #"[\(\),]" "")
+      (string/replace #"/" "-")
+      weird->hyphen
+      (strip "-")))
 
 (defn str->kw
   [thing] (-> thing
               clean-for-kw
               keyword))
 
+(defn empty-str-or-nil->nil
+  [thing]
+  (if (nil? thing)
+    nil
+    (let [val (string/trim thing)]
+      (if (seq val) val nil))))
+
 (comment
+
+  (let [rows [["a" nil] [nil " "]]]
+    (->> (take 2 rows)
+         (map (fn [row] (map empty-str-or-nil->nil row)))
+         ;; (map (fn [row] row))
+         ;; (filter #(complement (every? nil? %)))
+         (filter #(not (every? nil? %)))
+    )
+  )
+
+  (empty-str-or-nil->nil nil)
+
+  (empty-str-or-nil->nil "  \n \t ")
+
+  (empty-str-or-nil->nil "  n \t ")
+
+  (map empty-str-or-nil->nil (list nil "\n\t" "  n \t "))
+
 
   (weird->hyphen "ab_ c d  ")
 
@@ -192,5 +219,7 @@
   (trimnil nil)
 
   (trimnil " a ")
+
+  (string/join ", " (list "a" "b"))
 
 )

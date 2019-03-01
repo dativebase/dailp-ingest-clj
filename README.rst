@@ -33,6 +33,31 @@ Useful links
   https://docs.google.com/document/d/1jUgIjOMH_c0HHnQaJZjBXny7XPConrphToaz8nyGDX0/edit#heading=h.j48zjb5g20tm
 
 
+Questions
+================================================================================
+
+DF1975--Master
+--------------------------------------------------------------------------------
+
+1. Should all of the verb roots have category "V"? Or should transitivity
+   information be used to determine a transitivity-based category, e.g., "VT",
+   "VTA", etc.?
+
+2. What should the Sources be for DF 1975 and DF 2003? The best thing would be
+   for me to create a Google Sheet for DAILP sources and automate the ingest of
+   it. The ingest script will then have to be modified to document the correct
+   source for each form ingested.
+
+   - See my draft sources GSheet at:
+     https://docs.google.com/spreadsheets/d/1W46XymhtohAizs_KVRCNvfTUL0k4-LWwYbEv8aHau_4/edit?usp=sharing
+
+3. Do the "surface form" values of the DF1975--Master spreadsheet need to be
+   modified in any way?
+
+4. What syntactic category do we want the inflected verb forms to have? I have
+   been giving them "S". We could give them "VP" or some such thing ...
+
+
 Installation
 ================================================================================
 
