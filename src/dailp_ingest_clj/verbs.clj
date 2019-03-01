@@ -286,22 +286,41 @@
    [:prs-ʔ-grade-mod-morpheme-break]
    [:prs-ʔ-grade-mod-tag]])
 
-(defmethod dailp-form-map->form-map :prs-glot-grade
-  [state dailp-form-map]
+(defn get-kwixer
+  "Given a prefix keyword, return a function that will prefix that keyword to
+  any keyword passed into it. Keyword-prefixer = kwixer obvs."
+  [prefix-kw]
+  (fn [suffix-kw]
+    (keyword (string/join "-" (map name (list prefix-kw suffix-kw))))))
+
+(defn dailp-surface-form-map->form-map
+  "Return an OLD form map constructed primarily from the DAILP form map
+  dailp-form-map. the mb-mg-getter-vecs are a vector of vectors for getting
+  the morpheme break/gloss values for the target form type. The translation
+  keys are similarly a vector of keys for getting the translations of the
+  target form type. The kwixer is a function that converts generic keyword
+  keys like :surface-form to type-specific keys like :impt-surface-form."
+  [state dailp-form-map mb-mg-getter-vecs translation-keys kwixer]
   (let [[mb mg]
-        (compute-morpheme-break-gloss dailp-form-map
-                                      prs-glot-grade-mb-mg-getter-vecs)]
+        (compute-morpheme-break-gloss dailp-form-map mb-mg-getter-vecs)]
     (create-form
-     {::ocm/narrow_phonetic_transcription (:prs-ʔ-grade-surface-form dailp-form-map)
-      ::ocm/phonetic_transcription (:prs-ʔ-grade-simple-phonetics dailp-form-map)
-      ::ocm/transcription (:prs-ʔ-grade-syllabary dailp-form-map)
+     {::ocm/narrow_phonetic_transcription ((kwixer :surface-form) dailp-form-map)
+      ::ocm/phonetic_transcription ((kwixer :simple-phonetics) dailp-form-map)
+      ::ocm/transcription ((kwixer :syllabary) dailp-form-map)
       ::ocm/morpheme_break mb
       ::ocm/morpheme_gloss mg
-      ::ocm/translations (get-translations dailp-form-map
-                                           prs-glot-grade-translation-keys)
+      ::ocm/translations (get-translations dailp-form-map translation-keys)
       ::ocm/syntactic_category (get-in state [:syntactic-categories :S :id])
       ::ocm/comments (get-comments dailp-form-map)
       ::ocm/tags [(get-in state [:tags :ingest-tag :id])]})))
+
+(defmethod dailp-form-map->form-map :prs-glot-grade
+  [state dailp-form-map]
+  (dailp-surface-form-map->form-map
+   state dailp-form-map
+   prs-glot-grade-mb-mg-getter-vecs
+   prs-glot-grade-translation-keys
+   (get-kwixer :prs-ʔ-grade)))
 
 (defmethod dailp-form-map->form-map :prs-h-grade
   [state dailp-form-map]

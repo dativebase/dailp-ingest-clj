@@ -142,6 +142,9 @@
 
   (filter identity (map :all-entries-key (fetch-upload-verbs fake-state false)))
 
+  (let [kwixer (get-kwixer :prs-ʔ-grade)]
+    (kwixer :surface-form))
+
   (get-in {:a {:b 2}} [:a :b])
 
   (:a {:a 2})
