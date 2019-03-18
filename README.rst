@@ -86,6 +86,22 @@ DF1975--Master
    c. There appear to be 4 rows with only a "Transitivity" value, 3 with "I", and
       one with "T".
 
+   d. There are about 100 forms lacking translations. To find them, search for
+      translations with the following transcription value: "FIXME TRANSLATION
+      NEEDED".
+
+   e. There are a handful of forms lacking valid morpheme gloss values. In some
+      (9) cases a default value of "FIXME.MORPHEME.GLOSS.NEEDED" was used.
+      Search for this value to find them. In a handful of cases, a value was
+      constructed using the first translation value. Here are those constructed
+      values:
+
+      - "scatter.(intransitive)"
+      - "pour.into.a.container,.fill.up"
+      - "(sun.or.moon).shine,.be.sunny"
+      - "(the.ground).become.frosty"
+      - "thunder"
+
 
 Installation
 ================================================================================

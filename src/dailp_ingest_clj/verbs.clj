@@ -14,6 +14,9 @@
 (def df-1975-max-col 119)
 (def df-1975-max-row 2350)
 
+(def fixme-translation "FIXME TRANSLATION NEEDED")
+(def fixme-morpheme-gloss "FIXME.MORPHEME.GLOSS.NEEDED")
+
 (def root-keys
   [:all-entries-key
    :df1975-page-ref
@@ -188,7 +191,7 @@
   [state [_ header-row & rows]]
   (let [header-row (clean-verb-header-row header-row)]
     (->> rows
-         ;; (take 10)
+         ;; (take 4)  ;; HERE TO REDUCE FOR DEV
          remove-empty-rows
          (rows->row-maps state header-row)
     )))
@@ -215,17 +218,17 @@
 (defn get-root-map
   "Get the :root map from seq-of-form-maps if a good one can be found there. If
   not, get one from the map representing the next row."
-  [seq-of-form-maps next-row-map next-next-row-map]
+  [seq-of-form-maps]
   (if-let [first-try (->> seq-of-form-maps
                           (filter is-good-root-map?)
                           first)]
     first-try
     (if-let [second-try
-             (->> (row-map->seq-of-form-maps next-row-map)
+             (->> (row-map->seq-of-form-maps)
                   (filter is-good-root-map?)
                   first)]
       second-try
-      (->> (row-map->seq-of-form-maps next-next-row-map)
+      (->> (row-map->seq-of-form-maps)
            (filter is-good-root-map?)
            first)
       )))
@@ -233,9 +236,9 @@
 (defn row-map->dailp-form-maps
   "Given a row map (from a GSheet extraction), return a DAILP form map, i.e.,
   a map whose key/value pairs are from the GSheet and are largely unmodified."
-  [state next-row-map next-next-row-map row-map]
+  [state row-map]
   (let [seq-of-form-maps (row-map->seq-of-form-maps row-map)]
-    (map (fn [m] (assoc m :root (get-root-map seq-of-form-maps next-row-map next-next-row-map)))
+    (map (fn [m] (assoc m :root (get-root-map seq-of-form-maps)))
          seq-of-form-maps)))
 
 (defmulti dailp-form-map->form-map
@@ -243,12 +246,36 @@
 
 (defn get-translations
   [dailp-form-map translation-keys]
-  (->> translation-keys
-       (map (fn [k]
-              (if-let [v (-> k dailp-form-map empty-str-or-nil->nil)]
-                {::ocm/transcription v ::ocm/grammaticality ""}
-                nil)))
-       (filter identity)))
+  (let [actual-translations
+        (->> translation-keys
+             (map (fn [k]
+                    (if-let [v (-> k dailp-form-map empty-str-or-nil->nil)]
+                      {::ocm/transcription v ::ocm/grammaticality ""}
+                      nil)))
+             (filter identity)
+             seq)]
+    (if actual-translations
+      actual-translations
+      (list
+       {::ocm/transcription fixme-translation
+        ::ocm/grammaticality ""}))))
+
+(defn translation->morpheme-gloss
+  [translation]
+  (string/replace translation #"\s+" "."))
+
+(defn get-morpheme-gloss
+  [dailp-form-map translations]
+  (let [mg (:morpheme-gloss dailp-form-map)]
+    (if mg mg
+        (let [first-transl
+              (-> translations first ::ocm/transcription)
+              provisional-mg
+              (if (= first-transl fixme-translation)
+                fixme-morpheme-gloss
+                (translation->morpheme-gloss first-transl))]
+          (println provisional-mg)
+          provisional-mg))))
 
 (def root-translation-keys
   [:root-translation-1
@@ -301,12 +328,13 @@
 
 (defmethod dailp-form-map->form-map :root
   [state dailp-form-map]
-  (let [form
+  (let [translations (get-translations dailp-form-map root-translation-keys)
+        form
         (create-form
          {::ocm/transcription (:root-morpheme-break dailp-form-map)
           ::ocm/morpheme_break (:root-morpheme-break dailp-form-map)
-          ::ocm/morpheme_gloss (:morpheme-gloss dailp-form-map)
-          ::ocm/translations (get-translations dailp-form-map root-translation-keys)
+          ::ocm/morpheme_gloss (get-morpheme-gloss dailp-form-map translations)
+          ::ocm/translations translations
           ::ocm/syntactic_category (get-in state [:syntactic-categories :V :id])
           ::ocm/comments (get-comments dailp-form-map nil)
           ::ocm/tags [(get-in state [:tags :ingest-tag :id])]})
@@ -425,7 +453,7 @@
   [state dailp-form-map]
   (dailp-surface-form-map->form-map state dailp-form-map :inf))
 
-(defn monkeys
+(defn wrapped-dailp-form-map->form-map
   [state dailp-form-map]
   (try
     (dailp-form-map->form-map state dailp-form-map)
@@ -436,8 +464,7 @@
 
 (defn dailp-form-maps->form-maps
   [state dailp-form-maps]
-  ;; (map (partial dailp-form-map->form-map state) dailp-form-maps))
-  (map (partial monkeys state) dailp-form-maps))
+  (map (partial wrapped-dailp-form-map->form-map state) dailp-form-maps))
 
 (def not-empty? (complement empty?))
 
@@ -458,7 +485,8 @@
    "numeric"
    "simple-phonetics"
    "syllabary"
-   ""])
+   ;; ""
+   ])
 
 (defn is-transcription-type-key?
   [k]
@@ -490,9 +518,9 @@
   (not (row-map-has-root-with-key? row-map)))
 
 (defn print-bad
-  [bad next-row-map next-next-row-map & {:keys [border] :or {border false}}]
+  [bad & {:keys [border] :or {border false}}]
   ;; (println (:verb-type bad))
-  ;; (pprint/pprint bad)
+  (pprint/pprint bad)
   ;; (println (keys bad))
 
   (if-let [good-vals
@@ -505,17 +533,19 @@
       (when border (println (string/join (take 80 (repeat \-)))))
       (pprint/pprint good-vals)
       (pprint/pprint (get-in bad [:root :all-entries-key]))
-      (pprint/pprint (:all-entries-key next-row-map))
+      (pprint/pprint (:all-entries-key))
       (when border (println (string/join (take 80 (repeat \-)))))
     )
   ))
 
 (defn remove-bad-dailp-form-maps
-  [state next-row-map next-next-row-map dailp-form-maps]
+  [state dailp-form-maps]
   ;; FOX HERE: debug the :root-less maps
-  (let [bad (first (filter row-map-lacks-root-with-key? dailp-form-maps))
-        _ (when (seq bad)
-            (print-bad bad next-row-map next-next-row-map :border true))]
+  (let [a 2
+        ;; bad (first (filter row-map-lacks-root-with-key? dailp-form-maps))
+        ;; _ (when (seq bad)
+        ;;     (print-bad bad :border true))
+        ]
     (->> dailp-form-maps
          (filter row-map-has-root-with-key?)
          (filter row-map-has-content?)
@@ -523,21 +553,19 @@
          )))
 
 (defn row-map->form-maps
-  [state row-map next-row-map next-next-row-map]
+  [state row-map]
   (->> row-map
-       (row-map->dailp-form-maps state next-row-map next-next-row-map)
-       (remove-bad-dailp-form-maps state next-row-map next-next-row-map)
+       (row-map->dailp-form-maps state)
+       (remove-bad-dailp-form-maps state)
        (dailp-form-maps->form-maps state)
   ))
 
 (defn row-maps->form-maps
   [state row-maps]
-  (->> (concat row-maps '({} {}))
-       ;; (cons {})
-       (partition 3 1)
-       (reduce (fn [agg [row-map next-row-map next-next-row-map]]
-                 (concat agg (row-map->form-maps state row-map next-row-map next-next-row-map)))
-          ())))
+  (reduce (fn [agg row-map]
+            (concat agg (row-map->form-maps state row-map)))
+          ()
+          row-maps))
 
 (defn fix-key-less-row
   "Fix row by adding to it all of the root-targeting attr/vals that row lacks
@@ -549,18 +577,31 @@
         fixer (merge (select-keys last-full-row root-keys) good-parts)]
     (merge row fixer)))
 
+(defn root-is-valid?
+  "Return true if the root within the supplied row map is valid."
+  [row]
+  (and (:all-entries-key row)
+       (:root-morpheme-break row)
+       (->> (map (fn [k] (k row))
+                 [:root-translation-1
+                  :root-translation-2
+                  :root-translation-3])
+            (filter identity)
+            seq)))
+
 (defn project-roots
   "Give good root attr-vals to all rows that lack them. The last seen good root
   attr-vals are assumed to apply to the current row, if it lacks good root
   attr-vals of its own."
   [row-maps]
-  (reduce (fn [[last-full-row rows] row]
-            (let [k (:all-entries-key row)
-                  row (if k row (fix-key-less-row row last-full-row))
-                  last-full-row (if k row last-full-row)]
-              [last-full-row (conj rows row)]))
-          [nil []]
-          row-maps))
+  (->> row-maps
+       (reduce (fn [[last-full-row rows] row]
+                 (let [valid? (root-is-valid? row)
+                       row (if valid? row (fix-key-less-row row last-full-row))
+                       last-full-row (if valid? row last-full-row)]
+                   [last-full-row (conj rows row)]))
+               [nil []])
+       second))
 
 (defn table->forms
   "Convert a table data structure (vec of vecs of strings) to a seq of OLD forms
@@ -572,9 +613,7 @@
   [(->> state
         verbs-key
         (table->row-maps state)
-
         project-roots
-
         (row-maps->form-maps state)
         (group-by (fn [[val err]] (if err :warnings :verbs)))
         ((fn [r] (-> state
@@ -604,18 +643,16 @@
        (map (fn [v] [(:id v) v]))
        (into {})))
 
-;; (into {} (map (fn [v] [(:id v) v]) verbs-seq))
-
 (defn update-state-verbs
   "Update state map's verbs-type-key map with the verbs in uploaded-verbs-ret."
-  [state uploaded-verbs-ret verbs-type-key]
+  [state verbs-type-key uploaded-verbs-ret]
   (let [current-verbs (verbs-type-key state)]
     [(assoc state verbs-type-key
             (merge current-verbs (verbs-seq->map uploaded-verbs-ret))) nil]))
 
 (defn fetch-upload-verbs
-  "Fetch verbs from GSheets, upload them to OLD, return state map with verbs-type-key submap
-  updated."
+  "Fetch verbs from Google Sheets, upload them to OLD, return state map with
+  verbs-type-key submap updated."
   [state & {:keys [disable-cache] :or {disable-cache true}}]
   (let [verbs-key :df-1975-verbs]
     (->> state
@@ -626,6 +663,5 @@
                                      df-1975-max-row
                                      verbs-key)
          (apply-or-error (partial table->forms verbs-key))
-         ;; (apply-or-error (partial upload-verbs verbs-key))
-         ;; (apply-or-error (partial update-state-verbs verbs-key))
-         )))
+         (apply-or-error (partial upload-verbs verbs-key))
+         (apply-or-error (partial update-state-verbs state verbs-key)))))
