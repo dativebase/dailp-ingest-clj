@@ -11,7 +11,7 @@
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
             [dailp-ingest-clj.resources :refer [create-resource-with-unique-attr]]))
 
-(def ingest-tag-namespace "dailp-ingestion-2019")
+(def ingest-tag-namespace "dailp-ingest")
 
 (def tags-sheet-name "DAILP Tags")
 

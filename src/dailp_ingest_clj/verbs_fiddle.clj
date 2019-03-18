@@ -128,7 +128,15 @@
    :verb-type :impf,
    :impf-pp-morpheme-break ""})
 
+(defn three-args
+  [a b c]
+  (list a b c))
+
 (comment
+
+  (three-args 1 2 3)
+
+  ((partial three-args 1 2) 3)
 
   (row-map-has-content? nil-form-map)
 
@@ -314,11 +322,26 @@
 
   (hash-map :a 2 :b 3)
 
+  fake-state
+
   (fetch-upload-verbs fake-state)
 
   (fetch-upload-verbs fake-state :disable-cache false)
 
-  (fetch-upload-verbs fake-state :disable-cache false)
+  (let [x (fetch-upload-verbs fake-state :disable-cache false)]
+    (-> x
+        first
+        :df-1975-verbs
+        first
+        ))
+
+  (let [[new-state err]
+        (fetch-upload-verbs fake-state :disable-cache false)
+        verb-warnings
+        (get-in new-state [:warnings :df-1975-verbs])]
+    (count verb-warnings))
+
+  (first {:a 2 :b 3})
 
   (boolean (and nil 1))
 
@@ -427,7 +450,3 @@
   (reverse [1 2 3])
 
 )
-
-
-
-

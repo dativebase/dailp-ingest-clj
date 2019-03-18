@@ -1,6 +1,7 @@
 (ns dailp-ingest-clj.resources-fiddle
   (:require [dailp-ingest-clj.resources :refer :all]
-            [old-client.core :refer [make-old-client]]))
+            [old-client.core :refer [make-old-client]]
+            [old-client.resources :refer [fetch-resources]]))
 
 (def test-form
   {:transcription "xi",
@@ -60,5 +61,9 @@
   (coll? 4)
 
   (flatten [{:a 2 :b 3} {:a 2 :b 4}])
+
+  (fetch-resources (make-old-client) :form)
+
+  (count (fetch-resources (make-old-client) :form))
 
 )
