@@ -120,6 +120,19 @@
    "Unknown error when attempting to update %s resource with id '%s': '%s'"
    resource-name (-> matches first :id) err))
 
+(defn create-resource-either
+  "Create a resource, returning an either, i.e., a 2-tuple where the second
+  element is any error."
+  [state resource-map & {:keys [resource-name]}]
+  (try+
+   [(create-resource (:old-client state) resource-name resource-map) nil]
+   (catch Object err
+     [nil (format
+           (str
+            "Unknown error when attempting to create a %s resource in"
+            " upsert-resource: %s.")
+           resource-name err)])))
+
 (defn upsert-resource
   "Upsert the resource. First search for an existing match. If it exists, update
   it with the current ingest tag. If it does not exist, create it."
@@ -146,14 +159,7 @@
              [nil (upsert-err-msg resource-name matches (json-parse body))]))
          (catch Object err
            [nil (upsert-err-msg resource-name matches err)])))
-      (try+
-       [(create-resource (:old-client state) resource-name resource-map) nil]
-       (catch Object err
-         [nil (format
-               (str
-                "Unknown error when attempting to create a %s resource in"
-                " upsert-resource: %s.")
-               resource-name err)])))))
+      (create-resource-either state resource-name resource-map))))
 
 (defn update-resource-with-unique-attr
   "Update the existing resource that matches the supplied resource-map according
