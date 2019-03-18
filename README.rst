@@ -2,6 +2,12 @@
   DAILP Ingest
 ================================================================================
 
+- structural editing "lispy"
+
+  - doesn't work on spacemacs
+  - see the spacemacs one
+
+
 DAILP Ingest is a tool that reads Cherokee data from a set of spreadsheets and
 makes HTTP calls to upload those data to an Online Linguistic Database (OLD)
 instance.
@@ -11,17 +17,27 @@ Ingestion Plan
 
 1. Functional morphemes:
 
-   a. Orthographic Inventories:
+   a. Tags:
+      https://docs.google.com/spreadsheets/d/1eEk3JP2WTkP8BBShBHURrripKPredy-sCutQMiGfVmo/edit#gid=0."
+   b. Orthographic Inventories:
       https://docs.google.com/spreadsheets/d/16Dfq04tCSP0kuqBdMX1R3DHJ7kB6RJ3Uy7-ufN-Y_w8/edit#gid=886203972
-   b. Prepronominal Prefixes:
+   c. Syntactic Categories:
+      https://docs.google.com/spreadsheets/d/159i_Cygdqsnp55QBzqJu7eozxsNEiVIiXhwEzls3q7g/edit?usp=sharing."
+   d. Pronominal Prefixes:
+      https://docs.google.com/spreadsheets/d/1OMzkbDGY1BqPR_ZwJRe4-F5_I12Ao5OJqqMp8Ej_ZhE/edit?usp=sharing
+   e. Prepronominal Prefixes:
       https://docs.google.com/spreadsheets/d/12v5fqtOztwwLeEaKQJGMfziwlxP4n60riMsN9dYw9Xc/edit#gid=0
-   c. Modal Suffixes:
+   f. Modal Suffixes:
       https://docs.google.com/spreadsheets/d/1QWYWFeK6xy7zciIliizeW2hBfuRPNk6dK5rGJf2pdNc/edit#gid=0
-   d. Aspectual Suffixes:
+   g. Aspectual Suffixes:
       https://docs.google.com/spreadsheets/d/19jPHtphsvWDliWq9z3WL_Fz6omHCFTFseD6fh1FLY70/edit#gid=0
 
-2. DF1975
-3. DF2003
+2. Verbs (roots and inflected forms):
+
+   a. DF1975:
+
+   b. DF2003:
+
 
 Useful links
 --------------------------------------------------------------------------------
@@ -56,6 +72,19 @@ DF1975--Master
 
 4. What syntactic category do we want the inflected verb forms to have? I have
    been giving them "S". We could give them "VP" or some such thing ...
+
+5. DF1975-Master
+
+   a. Row 1881 has a root line that only has values for "Transitivity" "I" and
+      "UDB Class" "4a.i.irr.". What does this mean?
+
+   b. Most of the root morpheme columns are missing values for row 362 "send".
+      WARNING: current logic may cause the inflected forms to use the root value
+      of the preceding row. That is, the form with translation "I'm sending it"
+      might be incorrectly using the "set.down.CMP" root shape. CHECK THIS!
+
+   c. There appear to be 4 rows with only a "Transitivity" value, 3 with "I", and
+      one with "T".
 
 
 Installation

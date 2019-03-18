@@ -47,9 +47,13 @@
 
   (fetch-tags-from-worksheet false)  ;; from GSheets, cache enabled
 
-  (fetch-upload-tags (get-state))  ;; fetch from GSheets (cache disabled) and upload to OLD
+  (fetch-upload-tags (get-state))
 
-  (fetch-upload-tags (get-state) false)  ;; fetch from GSheets (cache enabled) and upload to OLD
+  (fetch-upload-tags (get-state) :disable-cache false)
+
+  (map (fn [x] (rand-int 10)) (range 10))
+
+  (time (map (fn [x] (rand-int 10)) (range 10)))
 
   (map? "abc")
 
@@ -65,11 +69,11 @@
 
   (empty? "")
 
-  (-> (fetch-upload-tags (get-state) false)
+  (-> (fetch-upload-tags (get-state) :disable-cache false)
       :tags
       keys)
 
-  (->> (fetch-upload-tags (get-state) false)
+  (->> (fetch-upload-tags (get-state) :disable-cache false)
        :tags
        (map (fn [[key {:keys [id]}]] [key id])))
 

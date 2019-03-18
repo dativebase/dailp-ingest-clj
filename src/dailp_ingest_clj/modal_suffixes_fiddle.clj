@@ -11,7 +11,7 @@
    (make-old-client)
    {:query {:filter ["Form" "syntactic_category" "name" "=" "MOD"]}}))
 
-(def fake-state
+#_(def fake-state
   {:old-client (make-old-client)
   :created_pronominal_prefixes [],
   :warnings

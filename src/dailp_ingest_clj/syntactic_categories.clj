@@ -1,5 +1,6 @@
 (ns dailp-ingest-clj.syntactic-categories
-  "Logic for ingesting DAILP syntactic categories."
+  "Logic for ingesting DAILP syntactic categories from the Google Sheet at
+  https://docs.google.com/spreadsheets/d/159i_Cygdqsnp55QBzqJu7eozxsNEiVIiXhwEzls3q7g/edit?usp=sharing."
   (:require [old-client.models :refer [syntactic-category]]
             [dailp-ingest-clj.utils :refer [seq-rets->ret
                                             apply-or-error

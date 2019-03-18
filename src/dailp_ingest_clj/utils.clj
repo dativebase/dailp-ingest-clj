@@ -117,6 +117,18 @@
 
   (str->kw "ab_ c d  ")
 
+  (assoc {} :a 2)
+
+  ;; functor
+  ;; (map (fn [x] x) (list 1 2 3))
+  ;; ((a -> b) (f a)) -> (f b)
+
+  ;; applicative functor
+  ;; ((a -> b) (f a)) -> (f b)
+
+  ;; monad
+  ;; ((a -> (f b)) (f a)) -> (f b)
+
 )
 
 ;; See https://adambard.com/blog/acceptable-error-handling-in-clojure/."
@@ -126,8 +138,15 @@
     (f val)
     [nil err]))
 
+(defmacro err->>
+  [val & fns]
+  `(->> [~val nil]
+        ~@(map (fn [f]
+                 `(apply-or-error ~f))
+               fns)))
+
 ;; See https://adambard.com/blog/acceptable-error-handling-in-clojure/."
-(defmacro err->> [val & fns]
+(defmacro orig-err->> [val & fns]
   (let [fns (for [f fns] `(apply-or-error ~f))]
     `(->> [~val nil]
           ~@fns)))
@@ -221,5 +240,8 @@
   (trimnil " a ")
 
   (string/join ", " (list "a" "b"))
+
+  (group-by second [[nil 1] [1 nil]])
+
 
 )

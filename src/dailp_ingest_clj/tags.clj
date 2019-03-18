@@ -1,14 +1,17 @@
 (ns dailp-ingest-clj.tags
+  "Ingests the DAILP Tags defined in the same-named Google Sheet at
+  https://docs.google.com/spreadsheets/d/1eEk3JP2WTkP8BBShBHURrripKPredy-sCutQMiGfVmo/edit#gid=0."
   (:require [clojure.string :as string]
             [clj-time.core :as t]
             [clj-time.format :as f]
             [dailp-ingest-clj.utils :refer [seq-rets->ret
                                             apply-or-error
+                                            err->>
                                             table->sec-of-maps]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
             [dailp-ingest-clj.resources :refer [create-resource-with-unique-attr]]))
 
-(def ingest-tag-namespace "ingest-uchihara-root")
+(def ingest-tag-namespace "dailp-ingestion-2019")
 
 (def tags-sheet-name "DAILP Tags")
 
@@ -63,7 +66,7 @@
 (defn upload-tags 
   "Upload the seq of tag resource maps to an OLD instance."
   [state tags]
-  (seq-rets->ret (map (partial create-tag state) tags)))
+  (seq-rets->ret (pmap (partial create-tag state) tags)))
 
 (defn get-tag-key
   "Return a map key for the tag: usually its name as a keyword, but ingest tag
@@ -88,8 +91,7 @@
 (defn fetch-upload-tags
   "Fetch tags from GSheets, upload them to OLD, return state map with :tags submap
   updated."
-  ([state] (fetch-upload-tags state true))
-  ([state disable-cache]
-   (->> (fetch-all-tags disable-cache)
-        (apply-or-error (partial upload-tags state))
-        (apply-or-error (partial update-state-tags state)))))
+  [state & {:keys [disable-cache] :or {disable-cache true}}]
+  (->> (fetch-all-tags disable-cache)
+       (apply-or-error (partial upload-tags state))
+       (apply-or-error (partial update-state-tags state))))

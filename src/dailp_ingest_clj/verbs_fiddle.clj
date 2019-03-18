@@ -1,5 +1,6 @@
 (ns dailp-ingest-clj.verbs-fiddle
   (:require [clojure.string :as string]
+            [clojure.spec.alpha :as s]
             [dailp-ingest-clj.verbs :refer :all]
             [dailp-ingest-clj.fixtures :refer :all]))
 
@@ -65,7 +66,136 @@
 
 (def x (list '("k" "1SG.A") '("atay" "deny") '("hi!h" "PRS") '("a" "IND")))
 
+(def nil-form-map
+  {:impf-mod-tag nil,
+   :impf-syllabary nil,
+   :impf-numeric nil,
+   :impf-ppp-morpheme-break nil,
+   :impf-translation-1 nil,
+   :impf-asp-morpheme-break nil,
+   :impf-ppp-tag nil,
+   :impf-translation-3 nil,
+   :impf-surface-form nil,
+   :impf-pp-tag nil,
+   :impf-asp-tag nil,
+   :impf-mid-refl-tag nil,
+   :impf-mod-morpheme-break nil,
+   :root
+   {:root-translation-1 nil,
+    :transitivity nil,
+    :root-morpheme-break nil,
+    :root-translation-2 nil,
+    :morpheme-gloss nil,
+    :df1975-page-ref nil,
+    :all-entries-key nil,
+    :udb-class nil,
+    :verb-type :root,
+    :root-translation-3 nil},
+   :impf-mid-refl-morpheme-break nil,
+   :impf-translation-2 nil,
+   :impf-simple-phonetics nil,
+   :verb-type :impf,
+   :impf-pp-morpheme-break nil})
+
+(def non-nil-form-map
+  {:impf-mod-tag nil,
+   :impf-syllabary nil,
+   :impf-numeric nil,
+   :impf-ppp-morpheme-break nil,
+   :impf-translation-1 nil,
+   :impf-asp-morpheme-break nil,
+   :impf-ppp-tag nil,
+   :impf-translation-3 nil,
+   :impf-surface-form nil,
+   :impf-pp-tag nil,
+   :impf-asp-tag nil,
+   :impf-mid-refl-tag nil,
+   :impf-mod-morpheme-break nil,
+   :root
+   {:root-translation-1 nil,
+    :transitivity nil,
+    :root-morpheme-break nil,
+    :root-translation-2 nil,
+    :morpheme-gloss nil,
+    :df1975-page-ref nil,
+    :all-entries-key nil,
+    :udb-class nil,
+    :verb-type :root,
+    :root-translation-3 nil},
+   :impf-mid-refl-morpheme-break nil,
+   :impf-translation-2 nil,
+   :impf-simple-phonetics nil,
+   :verb-type :impf,
+   :impf-pp-morpheme-break ""})
+
 (comment
+
+  (row-map-has-content? nil-form-map)
+
+  (row-map-has-content? non-nil-form-map)
+
+  (row-map-has-transcription? non-nil-form-map)
+
+  (-> non-nil-form-map
+      get-transcription-type-keys
+      (#(select-keys non-nil-form-map %))
+      ;; vals
+      ;; ((partial filter identity))
+      ;; not-empty?
+      )
+
+  (get-transcription-type-keys nil-form-map)
+
+  (remove-bad-dailp-form-maps
+   {} '(nil-form-map
+        non-nil-form-map))
+
+  (->> nil-form-map
+       keys
+       (map name)
+       (filter ends-with-transcription-type-suffix?)
+  )
+
+  (some true? '(true))
+
+  (some true? '(false true false))
+
+  (string/ends-with? "abc" "c")
+
+
+
+  (select-keys
+   nil-form-map
+   ((:verb-type nil-form-map) df-1975-key-sets))
+
+  (not-empty? ())
+
+  (not-empty? '(1))
+
+  (row-map-has-content? {} nil-form-map)
+
+  (row-map-has-content? {} non-nil-form-map)
+
+  (-> nil-form-map
+      :verb-type
+      df-1975-key-sets
+      (#(select-keys nil-form-map %)) 
+      vals
+      ((partial filter identity))
+      seq
+  )
+
+  (-> {:a 2}
+      :a
+      (#(do %))
+      )
+
+  (->> nil-form-map
+       (select-keys (-> nil-form-map :verb-type df-1975-key-sets))
+
+       )
+
+
 
   (apply (partial map (fn [& args] (string/join "-" args))) x)
 
@@ -134,9 +264,119 @@
 
   (into {} [[1 2] [1 3] [3 4]])
 
+  (partition 2 1 (cons nil [1 2 3 4 5 6 7]))
+
+  (partition 3 1 '(:monkeys :monkets :monkeys) '(1 2 3))
+
+  (list (range 10))
+
+  (let [x (range 10)
+        ]
+    (->> x
+         (cons {})
+         (partition 2 1)
+         (reduce (fn [agg [prev curr]] (concat agg (list {:prev prev :curr curr})))
+                 ())
+         ))
+
+  (let [x (range 10)
+        ]
+    (->> x
+         (cons {})
+         (partition 2 1)
+         (reduce (fn [agg [prev curr]] (concat agg (list {:prev prev :curr curr})))
+                 ())
+         ))
+
+  fake-state
+
+  (type {:a 2})
+
+  (type (select-keys {:a 2} [:a]))
+
+  (type (into {} (map #(do [% %]) (range 20))))
+
+  (into {} (map #(do [% %]) (range 20)))
+
+  (let [m (apply hash-map (flatten (range 20)))]
+    (filter (fn [[k v]] :boogers) m)
+  )
+
+  (mod 3 2)
+
+  (mod 4 2)
+
+
+  (hash-map (flatten (range 2)))
+
+  (flatten (range 10))
+
+
+  (hash-map :a 2 :b 3)
+
   (fetch-upload-verbs fake-state)
 
-  (fetch-upload-verbs fake-state false)
+  (fetch-upload-verbs fake-state :disable-cache false)
+
+  (fetch-upload-verbs fake-state :disable-cache false)
+
+  (boolean (and nil 1))
+
+  (filter #(= (:a %) 2) (list {:a 2} {:a 3} {:a 2 :b 3}))
+
+  (string/join (take 80 (repeat \-)))
+
+  (let [a :a]
+    (get {:a 2} a)
+    )
+
+  (type {:a 2})
+
+  (filter (fn [t]
+            (string/includes? (name (first t)) "translation"))
+          {:some-translation "chien"
+           :other "dog"})
+
+  (filter (fn [[k v]] (even? k))
+          {1 2 2 10 3 4 4 100})
+
+  (filter identity (vals {:verb-type :root :a 2 :b 4}))
+
+  (count (filter identity (vals {:verb-type :root :a 2 :b 4})))
+
+  (count (filter identity (vals {:verb-type :root :a nil :b nil})))
+
+
+  (filter first [[1 nil] [nil 1]])
+
+  (assoc-in {} [:a :b] 2)
+
+  (map :translations (fetch-upload-verbs fake-state false))
+
+  (->> (fetch-upload-verbs fake-state false)
+       (map second)
+       (filter identity)
+       ;; count
+       )
+
+  (or nil "")
+
+  (->> {:a 2} :a)
+
+
+  (->> (fetch-upload-verbs fake-state false)
+       (map second)
+       (filter identity)
+       ;; count
+       (map (fn [t] (get-in t [:err ::s/problems])))
+       (group-by count)
+       ;; ((fn [m] (get m 0)))
+       )
+
+  (filter
+   #(get-in % [:b :b])
+   '({:a {:b 2}})
+   )
 
   (count (fetch-upload-verbs fake-state false))
 
@@ -144,6 +384,13 @@
 
   (let [kwixer (get-kwixer :prs-ʔ-grade)]
     (kwixer :surface-form))
+
+  (let [kwixer (get-kwixer :prs-ʔ-grade)]
+    (get-translation-keys kwixer))
+
+  (let [kwixer (get-kwixer :prs-ʔ-grade)
+        keys (get-translation-keys kwixer)]
+    (get-translations prs-glot-test keys))
 
   (get-in {:a {:b 2}} [:a :b])
 
@@ -165,6 +412,7 @@
 
   (count (set [1 2 1]))
 
+  (get-in {} [:a :b])
 
 )
 

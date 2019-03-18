@@ -1,5 +1,6 @@
 (ns dailp-ingest-clj.prepronominal-prefixes
-  "Logic for ingesting DAILP prepronominal prefixes."
+  "Logic for ingesting DAILP prepronominal prefixes from the Google Sheet at
+  https://docs.google.com/spreadsheets/d/12v5fqtOztwwLeEaKQJGMfziwlxP4n60riMsN9dYw9Xc/edit#gid=0."
   (:require [dailp-ingest-clj.affixes :refer [affix-map->seq-of-forms
                                               construct-affix-form-maps]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]

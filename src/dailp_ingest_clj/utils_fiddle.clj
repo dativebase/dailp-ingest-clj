@@ -73,11 +73,55 @@
 (s/def ::server (s/keys* :req [::id ::host] :opt [::port]))
 
 
+
+(defn our-inc
+  [n] [(inc n) nil])
+
+(defn our-dec
+  [n] [(dec n) nil])
+
+(defn our-fail
+  [n] [nil "err"])
+
+
 (comment
+
+  (macroexpand '(err->> [1 nil] our-inc our-dec))
+
+  (macroexpand-1 '(err->> [1 nil] our-inc our-dec))
+
+  (apply-or-error inc [1 nil])
+
+  (apply-or-error inc [nil "i am error"])
+
+  (err->> 1 our-inc our-dec)
+
+  (err->> 1 our-inc our-inc)
+
+  (err->> 1 our-inc our-inc our-fail)
+
+  (err->> 1 our-fail our-inc our-inc)
 
   (char? \b)
 
   (char? "b")
+
+  (contains? [1] 0)
+
+  (contains? [1] 1)
+
+  (let [x {1 2}]
+    (contains? x 1))
+
+  (partition 3 1 "underfunded")
+
+  (nthrest [1 2 3] 3)
+
+  (doall (take 2 (range 10)))
+
+  (cons 1 '(1 2 3))
+
+  (rest [1 2 3])
 
   ((set "abc") \a)
 
