@@ -322,13 +322,23 @@
 
   (boolean (and nil 1))
 
+  (update {:a 2} {:a 4})
+
   (filter #(= (:a %) 2) (list {:a 2} {:a 3} {:a 2 :b 3}))
 
   (string/join (take 80 (repeat \-)))
 
+  (seq {})
+
   (let [a :a]
     (get {:a 2} a)
     )
+
+  (map inc [1 2 3])
+
+  (conj '(1 2 3) 4)
+
+  (conj [1 2 3] 4)
 
   (type {:a 2})
 
@@ -413,6 +423,8 @@
   (count (set [1 2 1]))
 
   (get-in {} [:a :b])
+
+  (reverse [1 2 3])
 
 )
 

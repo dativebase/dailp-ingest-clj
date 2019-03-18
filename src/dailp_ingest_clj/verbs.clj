@@ -168,7 +168,7 @@
        (map (fn [row] (map empty-str-or-nil->nil row)))
        (filter #(not (every? nil? %)))))
 
-(defn row->seq-of-row-maps
+(defn row->row-maps
   "Given a row (seq of strings and/or nils), return a map from keys in
   isomorphic header row to vals in row."
   [state header-row row]
@@ -176,16 +176,22 @@
        (map #(do [%1 %2]) header-row)
        (into {})))
 
-(defn table->seq-of-row-maps
-  [state [meta-row header-row & rows]]
-  (let [meta-row (clean-verb-header-row meta-row)
-        header-row (clean-verb-header-row header-row)]
+(defn rows->row-maps
+  [state header-row rows]
+  (reduce
+   (fn [agg row]
+     (conj agg (row->row-maps state header-row row)))
+   []
+   rows))
+
+(defn table->row-maps
+  [state [_ header-row & rows]]
+  (let [header-row (clean-verb-header-row header-row)]
     (->> rows
          ;; (take 10)
          remove-empty-rows
-         (reduce (fn [agg row]
-                   (conj agg (row->seq-of-row-maps state header-row row)))
-                 ()))))
+         (rows->row-maps state header-row)
+    )))
 
 (defn row-map->seq-of-form-maps
   [row-map]
@@ -533,16 +539,42 @@
                  (concat agg (row-map->form-maps state row-map next-row-map next-next-row-map)))
           ())))
 
-(defn table->seq-of-verb-form-maps
-  "Convert a table data structure (vec of vec of strings) to a seq of OLD form
-  maps. The input table is at (verbs-key state). The output seq of form maps
+(defn fix-key-less-row
+  "Fix row by adding to it all of the root-targeting attr/vals that row lacks
+  from last-full-row."
+  [row last-full-row]
+  (let [good-parts (->> (select-keys row root-keys)
+                        (map (fn [[k v]] (when v [k v])))
+                        (into {}))
+        fixer (merge (select-keys last-full-row root-keys) good-parts)]
+    (merge row fixer)))
+
+(defn project-roots
+  "Give good root attr-vals to all rows that lack them. The last seen good root
+  attr-vals are assumed to apply to the current row, if it lacks good root
+  attr-vals of its own."
+  [row-maps]
+  (reduce (fn [[last-full-row rows] row]
+            (let [k (:all-entries-key row)
+                  row (if k row (fix-key-less-row row last-full-row))
+                  last-full-row (if k row last-full-row)]
+              [last-full-row (conj rows row)]))
+          [nil []]
+          row-maps))
+
+(defn table->forms
+  "Convert a table data structure (vec of vecs of strings) to a seq of OLD forms
+  (maps). The input table is at (verbs-key state). The output seq of form maps
   will be re-stored at the same key of state. Any errors produced while
   generating the form maps will be stored as warnings under
   (get-in state [:warnings verbs-key])."
   [verbs-key state]
   [(->> state
         verbs-key
-        (table->seq-of-row-maps state)
+        (table->row-maps state)
+
+        project-roots
+
         (row-maps->form-maps state)
         (group-by (fn [[val err]] (if err :warnings :verbs)))
         ((fn [r] (-> state
@@ -593,7 +625,7 @@
                                      df-1975-max-col
                                      df-1975-max-row
                                      verbs-key)
-         (apply-or-error (partial table->seq-of-verb-form-maps verbs-key))
+         (apply-or-error (partial table->forms verbs-key))
          ;; (apply-or-error (partial upload-verbs verbs-key))
          ;; (apply-or-error (partial update-state-verbs verbs-key))
          )))
