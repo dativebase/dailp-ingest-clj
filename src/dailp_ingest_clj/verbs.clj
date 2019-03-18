@@ -7,7 +7,7 @@
                                             seq-rets->ret
                                             str->kw]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
-            [dailp-ingest-clj.resources :refer [upsert-resource]]))
+            [dailp-ingest-clj.resources :refer [create-resource-either]]))
 
 (def df-1975-sheet-name "DF1975--Master")
 (def df-1975-worksheet-name "DF1975--Master")
@@ -158,7 +158,7 @@
   the specified name. In all cases, return a 2-element attempt vector where the
   first element (in the success case) is the verb map."
   [state verb-map]
-  (upsert-resource state verb-map :resource-name :form))
+  (create-resource-either state verb-map :resource-name :form))
 
 (defn clean-verb-header-row
   [verb-header-row]
