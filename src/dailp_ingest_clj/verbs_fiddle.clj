@@ -258,6 +258,8 @@
 
   (ab->int "do") ;; [\d \o]
 
+  (ab->int "du") ;; [\d \o]
+
   (let [[a b] "ab"]
     [a b])
 

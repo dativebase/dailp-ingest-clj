@@ -14,7 +14,7 @@
              [fetch-upload-syntactic-categories]]
             [dailp-ingest-clj.tags :refer [fetch-upload-tags]]
             [dailp-ingest-clj.utils :refer [apply-or-error]]
-            [dailp-ingest-clj.verbs :refer [fetch-upload-verbs]]))
+            [dailp-ingest-clj.verbs-df-1975 :refer [fetch-upload-verbs-df-1975]]))
 
 (defn ingest
   []
@@ -26,7 +26,7 @@
        (apply-or-error fetch-upload-pp-forms)
        ;; (apply-or-error fetch-upload-mod-sfx-forms)
        ;; (apply-or-error fetch-upload-asp-sfx-forms)
-       ;; (apply-or-error fetch-upload-verbs)
+       ;; (apply-or-error fetch-upload-verbs-df-1975)
   )
 )
 

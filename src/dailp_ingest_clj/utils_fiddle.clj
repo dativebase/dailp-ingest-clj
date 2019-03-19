@@ -287,5 +287,21 @@
 
   (s/valid? ::id-types 1.2)
 
+  (* 8 8)
+
+  (some #{1} '(1 2 3))
+
+  (some #{4} '(1 2 3))
+
+  ((fn [v]
+    (cond
+      (some #{v} '(:fut)) [:ppp-morpheme-break-1 :ppp-tag-1
+                           :ppp-morpheme-break-2 :ppp-tag-2]
+      (some #{v} '(:prs :impf :fut-impt)) []
+      :else [:ppp-morpheme-break :ppp-tag]
+    )
+  ) :fut)
+
+
 )
 
