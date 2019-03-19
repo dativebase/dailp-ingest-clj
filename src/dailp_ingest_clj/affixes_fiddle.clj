@@ -35,6 +35,17 @@
     (extract-text-references
      affix-map "Test" (list :ref :ref-form :ref-tag :ref-morpheme-name)))
 
+  (let [affix-map {:crg ["247" "247"]
+                   :crg-form ["etre" "etiez"]
+                   :crg-tag ["to.be" "you(pl) were"]}]
+    (extract-text-references
+     affix-map "Test" (list :crg :crg-form :crg-tag)))
+
+  (let [affix-map {:crg ["247" "247"]
+                   :crg-form ["etre" "etiez"]}]
+    (extract-text-references
+     affix-map "Test" (list :crg :crg-form)))
+
   (format-morpheme-break-affix-value "-óʔi / -o/-ooo")
 
   (format-morpheme-break-affix-value "-óʔi")

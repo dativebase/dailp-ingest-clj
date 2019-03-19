@@ -36,7 +36,6 @@
                      (:allomorph-1 affix-map)
                      morpheme-gloss)))
 
-(defn get-comments-pp [affix-map] [])
 (defn get-comments-refl [affiix-map] [])
 (defn get-comments-cl [affiix-map] [])
 
@@ -69,27 +68,29 @@
        (filter (fn [[x & _]] ((complement nil?) x)))  ;; remove any vec whose first el is nil
        (map (fn [[pp form tag morph-name]]
               (format
-               "Compare %s (%s) morpheme %s glossed '%s' and named '%s'."
-               text-name pp (format-morpheme-break-affix-value form) tag
-               morph-name)))))
+               "Compare %s (%s) morpheme %s%s%s."
+               text-name
+               pp
+               (format-morpheme-break-affix-value form)
+               (if tag (str ", glossed '" tag "'") "")
+               (if morph-name (str ", named '" morph-name "'") ""))))))
 
 (defn extract-crg-references
   "Extract a seq of CRG strings, each describing a reference to affix-map in the
   CRG text. Note that the values of the affix-map attributes targeted (e.g.,
   :crg) are assumed to be vectors of strings."
-  [affix-map]
-  (extract-text-references affix-map "CRG"
-                           (list :crg :crg-form :crg-tag :crg-morpheme-name)))
+  [affix-map & {:keys [attrs]
+                :or {attrs (list :crg :crg-form :crg-tag :crg-morpheme-name)}}]
+  (extract-text-references affix-map "CRG" attrs))
 
 (defn extract-bma-2008-references
   "Extract a seq of BMA (2008) strings, each describing a reference to affix-map
   in the BMA (2008) text. Note that the values of the affix-map attributes
   targeted (e.g., :bma-2008) are assumed to be vectors of strings."
-  [affix-map]
-  (extract-text-references
-   affix-map
-   "BMA 2008"
-   (list :bma-2008 :bma-2008-form :bma-2008-tag :bma-2008-morpheme-name)))
+  [affix-map & {:keys [attrs]
+                :or {attrs (list :bma-2008 :bma-2008-form :bma-2008-tag
+                                 :bma-2008-morpheme-name)}}]
+  (extract-text-references affix-map "BMA 2008" attrs))
 
 (defn extract-singleton-comments-fields
   "Return a seq of strings, each documenting a simple attribute-value pair from
@@ -103,7 +104,7 @@
 
 (def ppp-fields
   [[:h3-specification "H3 specification"]
-   [:tonicity "tonicity"]
+   [:tonicity "Tonicity"]
    [:taoc "TAOC"]
    [:taoc-tag "TAOC tag"]])
 
@@ -116,6 +117,37 @@
     (extract-singleton-comments-fields affix-map ppp-fields)
     (extract-crg-references affix-map)
     (extract-bma-2008-references affix-map))))
+
+(def c-pp-fields
+  [[:laryngeal-alternation "Laryngeal alternation"]
+   [:taoc "TAOC"]])
+
+(def ab-pp-fields
+  (conj c-pp-fields [:prefix-series "Prefix series"]))
+
+(defn get-comments-c-pp
+  "Get a string of comments for a combined pronominal prefix (Combined PP) form."
+  [affix-map]
+  (string/join
+   " "
+   (concat
+    (extract-singleton-comments-fields affix-map c-pp-fields)
+    (extract-crg-references affix-map
+                            :attrs (list :crg :crg-form :crg-tag))
+    (extract-bma-2008-references affix-map
+                                 :attrs (list :bma-2008 :bma-2008-form)))))
+
+(defn get-comments-ab-pp
+  "Get a string of comments for a Sets A & B pronominal prefix form."
+  [affix-map]
+  (string/join
+   " "
+   (concat
+    (extract-singleton-comments-fields affix-map ab-pp-fields)
+    (extract-crg-references affix-map
+                            :attrs (list :crg :crg-form :crg-tag))
+    (extract-bma-2008-references affix-map
+                                 :attrs (list :bma-2008 :bma-2008-form)))))
 
 (def mod-fields
   [[:taoc "TAOC"]])
@@ -130,7 +162,8 @@
     (extract-bma-2008-references affix-map))))
 
 (def comments-getters
-  {:PP get-comments-pp
+  {:PP {:c-pp-form-maps get-comments-c-pp
+        :ab-pp-form-maps get-comments-ab-pp}
    :PPP get-comments-ppp
    :REFL get-comments-refl
    :MOD get-comments-mod
@@ -182,11 +215,13 @@
   "Given an affix map (representing a row from a spreadsheet), return a sequence
   of form maps. One spreadsheet row may represent multiple forms because
   multiple allomorphs can be encoded in a single row."
-  [affix-map state morpheme-gloss syncatkey]
+  [affix-map state morpheme-gloss syncatkey affix-key]
   (let [translations [{::ocm/transcription (:morpheme-name affix-map)
                        ::ocm/grammaticality ""}]
         syncat-id (get-in state [:syntactic-categories syncatkey :id])
-        comments-getter (syncatkey comments-getters)
+        comments-getter (-> (syncatkey comments-getters)
+                            ((fn [getter]
+                              (if (map? getter) (affix-key getter) getter))))
         comments (comments-getter affix-map)
         col-tag-pairs (syncatkey prefix-col->tag-idfr)]
      (->> (map
@@ -211,11 +246,13 @@
   "Produce a seq of zero or more forms from a map representing a single affix.
   Return a 2-vector containing the seq of forms and the state map, which may
   have been updated."
-  [affix-map state & {:keys [syncatkey] :or {syncatkey :PPP}}]
+  [affix-map state & {:keys [syncatkey affix-key] :or {syncatkey :PPP
+                                                       affix-key nil}}]
   (let [morpheme-gloss (:tag affix-map)]
      (if (gloss-is-neg morpheme-gloss)  ;; NOTE: ignoring NEG-glossed affixes ...
        [() (update-state-neg-gloss-warnings morpheme-gloss affix-map state)]
-       [(-affix-map->seq-of-forms affix-map state morpheme-gloss syncatkey) state])))
+       [(-affix-map->seq-of-forms affix-map state morpheme-gloss syncatkey affix-key)
+        state])))
 
 (defn extract-affix-forms-to-agg
   "Extract a seq of zero or more affix form maps from affix-map and store them
@@ -223,8 +260,10 @@
   the type of affix being extracted."
   [affix-key syncatkey agg affix-map]
   (let [[seq-of-forms new-state]
-        (affix-map->seq-of-forms
-         affix-map (:state agg) :syncatkey syncatkey)]
+        (affix-map->seq-of-forms affix-map
+                                 (:state agg)
+                                 :syncatkey syncatkey
+                                 :affix-key affix-key)]
     (-> (assoc agg :state new-state)
         (update affix-key
                 (fn [old-form-maps]
