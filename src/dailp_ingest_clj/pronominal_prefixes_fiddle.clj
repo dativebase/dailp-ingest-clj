@@ -26,4 +26,10 @@
       first
       :c-pp-form-maps)
 
+  (-> (fetch-upload-rm-pp-forms fake-state :disable-cache false)
+      first
+      :rm-pp-form-maps
+  )
+
+
 )
