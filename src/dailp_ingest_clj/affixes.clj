@@ -118,12 +118,16 @@
     (extract-crg-references affix-map)
     (extract-bma-2008-references affix-map))))
 
+(def rm-pp-fields
+  [[:taoc "TAOC"]])
+
 (def c-pp-fields
-  [[:laryngeal-alternation "Laryngeal alternation"]
-   [:taoc "TAOC"]])
+  (conj rm-pp-fields
+        [:laryngeal-alternation "Laryngeal alternation"]))
 
 (def ab-pp-fields
-  (conj c-pp-fields [:prefix-series "Prefix series"]))
+  (conj c-pp-fields
+        [:prefix-series "Prefix series"]))
 
 (defn get-comments-c-pp
   "Get a string of comments for a combined pronominal prefix (Combined PP) form."
@@ -149,6 +153,17 @@
     (extract-bma-2008-references affix-map
                                  :attrs (list :bma-2008 :bma-2008-form)))))
 
+(defn get-comments-rm-pp
+  "Get a string of comments for a Reflexive & Middle pronominal prefix form."
+  [affix-map]
+  (string/join
+   " "
+   (concat
+    (extract-singleton-comments-fields affix-map rm-pp-fields)
+    (extract-crg-references affix-map)
+    (extract-bma-2008-references affix-map))))
+
+
 (def mod-fields
   [[:taoc "TAOC"]])
 
@@ -163,7 +178,8 @@
 
 (def comments-getters
   {:PP {:c-pp-form-maps get-comments-c-pp
-        :ab-pp-form-maps get-comments-ab-pp}
+        :ab-pp-form-maps get-comments-ab-pp
+        :rm-pp-form-maps get-comments-rm-pp}
    :PPP get-comments-ppp
    :REFL get-comments-refl
    :MOD get-comments-mod
@@ -193,7 +209,8 @@
 (def prefix-col->tag-idfr
   {:PP [[:allomorph-1 :pp-pre-consonantal]
         [:allomorph-2 :pp-pre-vocalic]
-        [:allomorph-3 :pp-pre-v]]
+        [:allomorph-3 :pp-pre-v]
+        [:allomorph-4 :pp-pre-v]] ;; TODO: ask Jeff what tag should be used for this PP prefix
    :PPP [[:allomorph-1 :ppp-pre-consonantal]
          [:allomorph-2 :ppp-pre-vocalic]
          [:allomorph-3 :ppp-elsewhere]]

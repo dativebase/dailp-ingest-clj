@@ -8,7 +8,8 @@
             [dailp-ingest-clj.orthographies :refer [fetch-upload-orthographies]]
             [dailp-ingest-clj.prepronominal-prefixes :refer
              [fetch-upload-ppp-forms]]
-            [dailp-ingest-clj.pronominal-prefixes :refer [fetch-upload-pp-forms]]
+            [dailp-ingest-clj.pronominal-prefixes :refer
+             [fetch-upload-pp-forms fetch-upload-rm-pp-forms]]
             [dailp-ingest-clj.syntactic-categories :refer
              [fetch-upload-syntactic-categories]]
             [dailp-ingest-clj.tags :refer [fetch-upload-tags]]

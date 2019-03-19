@@ -25,13 +25,13 @@ Ingestion Plan
       https://docs.google.com/spreadsheets/d/159i_Cygdqsnp55QBzqJu7eozxsNEiVIiXhwEzls3q7g/edit?usp=sharing."
    d. Prepronominal Prefixes (DONE):
       https://docs.google.com/spreadsheets/d/12v5fqtOztwwLeEaKQJGMfziwlxP4n60riMsN9dYw9Xc/edit#gid=0
-   e. Pronominal Prefixes (2/3 DONE):
+   e. Pronominal Prefixes (DONE):
 
       - Combined (DONE):
         https://docs.google.com/spreadsheets/d/1OMzkbDGY1BqPR_ZwJRe4-F5_I12Ao5OJqqMp8Ej_ZhE/edit?usp=sharing
       - Sets A & B (DONE):
         https://docs.google.com/spreadsheets/d/1D0JZEwE-dj-fKppbosaGhT7Xyyy4lVxmgG02tpEi8nw/edit?usp=sharing
-      - Reflexive & Middle:
+      - Reflexive & Middle (DONE):
         https://docs.google.com/spreadsheets/d/1Q_q_1MZbmZ-g0bmj1sQouFFDnLBINGT3fzthPgqgkqo/edit?usp=sharing
 
    f. Modal Suffixes (DONE):
@@ -62,14 +62,19 @@ Questions
 DF1975--Master
 --------------------------------------------------------------------------------
 
-1. Should all of the verb roots have category "V"? Or should transitivity
-   information be used to determine a transitivity-based category, e.g., "VT",
-   "VTA", etc.?
+1. Syntactic categories for Verb roots and inflected forms.
 
-2. What should the Sources be for DF 1975 and DF 2003? The best thing would be
-   for me to create a Google Sheet for DAILP sources and automate the ingest of
-   it. The ingest script will then have to be modified to document the correct
-   source for each form ingested.
+   a. Should all of the verb roots have category "V"? Or should transitivity
+      information be used to determine a transitivity-based category, e.g.,
+      "VT", "VTA", etc.?
+
+   b. What syntactic category do we want the inflected verb forms to have? I
+      have been giving them "S". We could give them "VP" or some such thing ...
+
+2. Sources. What should the Sources be for DF 1975 and DF 2003? The best thing
+   would be for me to create a Google Sheet for DAILP sources and automate the
+   ingest of it. The ingest script will then have to be modified to document
+   the correct source for each form ingested.
 
    - See my draft sources GSheet at:
      https://docs.google.com/spreadsheets/d/1W46XymhtohAizs_KVRCNvfTUL0k4-LWwYbEv8aHau_4/edit?usp=sharing
@@ -77,27 +82,22 @@ DF1975--Master
 3. Do the "surface form" values of the DF1975--Master spreadsheet need to be
    modified in any way?
 
-4. What syntactic category do we want the inflected verb forms to have? I have
-   been giving them "S". We could give them "VP" or some such thing ...
-
-5. DF1975-Master
+4. DF1975-Master Questions.
 
    a. Row 1881 has a root line that only has values for "Transitivity" "I" and
-      "UDB Class" "4a.i.irr.". What does this mean?
+      "UDB Class" "4a.i.irr.". I have been taking this to mean that there is a
+      verb root with shape "hno:" that is the intransitive counterpart of
+      transitive "tell". I have been adding a new OLD form for this intransitive
+      verb root. Is this correct?
 
-   b. Most of the root morpheme columns are missing values for row 362 "send".
-      WARNING: current logic may cause the inflected forms to use the root value
-      of the preceding row. That is, the form with translation "I'm sending it"
-      might be incorrectly using the "set.down.CMP" root shape. CHECK THIS!
+      - Note: There appear to be 4 rows with only a "Transitivity" value as
+        described just above, 3 with "I", and one with "T".
 
-   c. There appear to be 4 rows with only a "Transitivity" value, 3 with "I", and
-      one with "T".
+   b. There are about 100 forms lacking translations. To find them, search in
+      the OLD for translations with the following transcription value: "FIXME
+      TRANSLATION NEEDED".
 
-   d. There are about 100 forms lacking translations. To find them, search for
-      translations with the following transcription value: "FIXME TRANSLATION
-      NEEDED".
-
-   e. There are a handful of forms lacking valid morpheme gloss values. In some
+   c. There are a handful of forms lacking valid morpheme gloss values. In some
       (9) cases a default value of "FIXME.MORPHEME.GLOSS.NEEDED" was used.
       Search for this value to find them. In a handful of cases, a value was
       constructed using the first translation value. Here are those constructed
@@ -108,6 +108,14 @@ DF1975--Master
       - "(sun.or.moon).shine,.be.sunny"
       - "(the.ground).become.frosty"
       - "thunder"
+
+5. Tags for Affix Allomorphs.
+
+   a. Allomorph 4 of "Reflexive & Middle Pronominal Prefixes". What tag should
+      be used for these? I am using the "pp-pre-v" tag. Is this correct?
+
+   b. Allomorph 4 of "Modal Suffixes". What tag should be used for these? I am
+      using the "mod-pre-v" tag. Is this correct?
 
 
 Installation
