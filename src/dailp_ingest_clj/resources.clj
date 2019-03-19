@@ -159,7 +159,7 @@
              [nil (upsert-err-msg resource-name matches (json-parse body))]))
          (catch Object err
            [nil (upsert-err-msg resource-name matches err)])))
-      (create-resource-either state resource-name resource-map))))
+      (create-resource-either state resource-map :resource-name resource-name))))
 
 (defn update-resource-with-unique-attr
   "Update the existing resource that matches the supplied resource-map according

@@ -8,6 +8,7 @@
             [dailp-ingest-clj.orthographies :refer [fetch-upload-orthographies]]
             [dailp-ingest-clj.prepronominal-prefixes :refer
              [fetch-upload-ppp-forms]]
+            [dailp-ingest-clj.pronominal-prefixes :refer [fetch-upload-pp-forms]]
             [dailp-ingest-clj.syntactic-categories :refer
              [fetch-upload-syntactic-categories]]
             [dailp-ingest-clj.tags :refer [fetch-upload-tags]]
@@ -20,14 +21,15 @@
        (apply-or-error fetch-upload-tags)
        (apply-or-error fetch-upload-orthographies)
        (apply-or-error fetch-upload-syntactic-categories)
-       (apply-or-error fetch-upload-ppp-forms)
-       (apply-or-error fetch-upload-mod-sfx-forms)
-       (apply-or-error fetch-upload-asp-sfx-forms)
+       ;; (apply-or-error fetch-upload-ppp-forms)
+       (apply-or-error fetch-upload-pp-forms)
+       ;; (apply-or-error fetch-upload-mod-sfx-forms)
+       ;; (apply-or-error fetch-upload-asp-sfx-forms)
        ;; (apply-or-error fetch-upload-verbs)
   )
 )
 
 (defn -main
-  "I don't do a whole lot ... yet."
+  "TODO: add runtime configuration, e.g., OLD URL and auth credentials."
   [& args]
   (ingest))
