@@ -16,7 +16,8 @@
 
 ;; Fake state: so we don't have to run the previous ingest steps just to get
 ;; the tags and syntactic categories in the state.
-(def fake-state
+(defn get-fake-state
+  []
   {:old-client (make-old-client)
    :created_pronominal_prefixes []
    :warnings {}
@@ -27,14 +28,14 @@
 (comment
 
   (create-resource-with-unique-attr
-   fake-state
+   (get-fake-state)
    test-form
    :resource-name :form)
 
   (get-resource-query :form test-form
-                      (get-in fake-state [:tags :ingest-tag :id]))
+                      (get-in (get-fake-state) [:tags :ingest-tag :id]))
 
-  (delete-all-resources fake-state :form)
+  (delete-all-resources (get-fake-state) :form)
 
   (second [1 2])
 
@@ -43,12 +44,12 @@
   (second [])
 
   (upsert-resource
-   fake-state
+   (get-fake-state)
    test-form
    :resource-name :form)
 
   (count (upsert-resource
-          fake-state
+          (get-fake-state)
           test-form
           :resource-name :form))
 

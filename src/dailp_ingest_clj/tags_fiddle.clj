@@ -27,10 +27,6 @@
 
 (comment
 
-  (keys (ns-publics 'clj-time.format))
-
-  (f/show-formatters)
-
   (get-now-iso8601)
 
   (get-ingest-tag-name)
@@ -50,24 +46,6 @@
   (fetch-upload-tags (get-state))
 
   (fetch-upload-tags (get-state) :disable-cache false)
-
-  (map (fn [x] (rand-int 10)) (range 10))
-
-  (time (map (fn [x] (rand-int 10)) (range 10)))
-
-  (map? "abc")
-
-  (get {:a 2} :a "dog")
-
-  (if (seq "") "y" "n")
-
-  (empty? "ab")
-
-  (if-let [a nil] a "frog")
-
-  (if-let [a false] a "frog")
-
-  (empty? "")
 
   (-> (fetch-upload-tags (get-state) :disable-cache false)
       :tags

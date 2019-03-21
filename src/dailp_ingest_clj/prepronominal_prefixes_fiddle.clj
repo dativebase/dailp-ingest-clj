@@ -28,7 +28,8 @@
 
 ;; Fake state: so we don't have to run the previous ingest steps just to get
 ;; the tags and syntactic categories in the state.
-(def fake-state
+(defn get-fake-state
+  []
   {:old-client (make-old-client)
    :created_pronominal_prefixes [],
    :warnings {},
@@ -242,8 +243,8 @@
 
   (fetch-ppps-from-worksheet :disable-cache true)
 
-  (construct-ppp-form-maps :state fake-state)
+  (construct-ppp-form-maps :state (get-fake-state))
 
-  (fetch-upload-ppp-forms fake-state :disable-cache false)
+  (fetch-upload-ppp-forms (get-fake-state) :disable-cache false)
 
 )

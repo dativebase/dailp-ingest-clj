@@ -4,8 +4,6 @@
 
 (comment
 
-  (+ 9 8)
-
   (fetch-upload-verbs-df-2003 fake-state)
 
   (fetch-upload-verbs-df-2003 fake-state :disable-cache false)

@@ -50,24 +50,38 @@
            (edn/read (java.io.PushbackReader. r))) nil]))
 
 (defn ingest
-  []
-  (->> [(get-state) nil]
-       ;; (apply-or-error merge-cached-state)
-       (apply-or-error fetch-upload-tags)
-       (apply-or-error fetch-upload-orthographies)
-       (apply-or-error fetch-upload-syntactic-categories)
-       (apply-or-error fetch-upload-ppp-forms)
-       (apply-or-error fetch-upload-pp-forms)
-       (apply-or-error fetch-upload-mod-sfx-forms)
-       (apply-or-error fetch-upload-asp-sfx-forms)
-       (apply-or-error fetch-upload-verbs-df-1975)
-       (apply-or-error fetch-upload-verbs-df-2003)
-       (apply-or-error store-state-on-disk)
-       (apply-or-error summarize-ingest)
-  )
-)
+  [url username password]
+  (let [old-client
+        (make-old-client {:url url
+                          :username username
+                          :password password})]
+    (->> [(get-state old-client) nil]
+         ;; (apply-or-error merge-cached-state)
+         (apply-or-error fetch-upload-tags)
+         (apply-or-error fetch-upload-orthographies)
+         (apply-or-error fetch-upload-syntactic-categories)
+         (apply-or-error fetch-upload-ppp-forms)
+         (apply-or-error fetch-upload-pp-forms)
+         (apply-or-error fetch-upload-mod-sfx-forms)
+         (apply-or-error fetch-upload-asp-sfx-forms)
+         (apply-or-error fetch-upload-verbs-df-1975)
+         (apply-or-error fetch-upload-verbs-df-2003)
+         (apply-or-error store-state-on-disk)
+         (apply-or-error summarize-ingest))))
 
 (defn -main
-  "TODO: add runtime configuration, e.g., OLD URL and auth credentials."
+  "Usage:
+
+      $ lein run https://some.domain.com/path/to/old/instance/ someusername somepassword
+  "
   [& args]
-  (ingest))
+  (if (not args)
+    (println "Please supply the URL, username and password of the OLD to upload the DAILP data to.")
+    (do
+      (println (apply (partial
+                       format
+                       (str "Attempting to upload the DAILP data to the OLD at '%s'"
+                            " using username '%s' and password '%s'."))
+                      args))
+      (apply ingest args)
+      (println "Success!"))))

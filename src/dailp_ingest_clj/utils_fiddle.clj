@@ -72,8 +72,6 @@
 
 (s/def ::server (s/keys* :req [::id ::host] :opt [::port]))
 
-
-
 (defn our-inc
   [n] [(inc n) nil])
 
@@ -82,7 +80,6 @@
 
 (defn our-fail
   [n] [nil "err"])
-
 
 (comment
 
@@ -132,7 +129,7 @@
   (:doc (meta #'starts-with-any?))
 
   (s/exercise-fn `starts-with-any?)
- 
+
   (stest/instrument `starts-with-any?)
 
   (stest/check `starts-with-any?)
@@ -231,8 +228,6 @@
   (map identity (list 1 2 3))
 
   (mapv vector (list 1 2 3))
- 
-
 
   (= '[1 2] [1 2])
 
@@ -257,8 +252,6 @@
   (nat-int? 1000000000000000000000000000000000000)
 
   (nat-int? -1)
-
-
 
   (zipmapgroup test-keys test-vals)
   ;; {:a ("a 1" "a 2" "a 3"), :b ("b 1" "b 2"), :c "c val"}
@@ -302,6 +295,4 @@
     )
   ) :fut)
 
-
 )
-

@@ -34,9 +34,7 @@
            (when (not (some #{[:tag "restricted"]
                               [:tag "foreign word"]}
                             (list [resource-name (:name rsrc)])))
-             (do
-               (println (format "Deleting %s %s" resource-name (:id rsrc)))
-               (delete-resource client resource-name (:id rsrc)))))
+               (delete-resource client resource-name (:id rsrc))))
          (fetch-resources (:old-client state) resource-name))))
 
 (defn delete-everything

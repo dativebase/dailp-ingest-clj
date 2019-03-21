@@ -2,7 +2,8 @@
   (:require [old-client.core :refer [make-old-client]]
             [dailp-ingest-clj.aspectual-suffixes :refer :all]))
 
-(def fake-state
+(defn get-fake-state
+  []
   {:old-client (make-old-client),
   :created_pronominal_prefixes [],
   :warnings
@@ -2027,19 +2028,19 @@
 
   (+ 2 3)
 
-  (fetch-upload-asp-sfx-forms fake-state)
+  (fetch-upload-asp-sfx-forms (get-fake-state))
 
-  (-> (fetch-upload-asp-sfx-forms fake-state)
+  (-> (fetch-upload-asp-sfx-forms (get-fake-state))
       first
       keys)
 
-  (fetch-upload-asp-sfx-forms fake-state :disable-cache false)
+  (fetch-upload-asp-sfx-forms (get-fake-state) :disable-cache false)
 
-  (-> (fetch-upload-asp-sfx-forms fake-state)
+  (-> (fetch-upload-asp-sfx-forms (get-fake-state))
       first
       count)
 
-  (asp-table->sec-of-maps fake-state tmp)
+  (asp-table->sec-of-maps (get-fake-state) tmp)
 
   (take 10 (repeat [1 2]))
 

@@ -105,7 +105,6 @@
               (if (= first-transl fixme-translation)
                 fixme-morpheme-gloss
                 (translation->morpheme-gloss first-transl))]
-          (println provisional-mg)
           provisional-mg))))
 
 (def root-translation-keys

@@ -2,15 +2,54 @@
   DAILP Ingest
 ================================================================================
 
-- structural editing "lispy"
-
-  - doesn't work on spacemacs
-  - see the spacemacs one
-
-
 DAILP Ingest is a tool that reads Cherokee data from a set of spreadsheets and
 makes HTTP calls to upload those data to an Online Linguistic Database (OLD)
 instance.
+
+
+Installation
+================================================================================
+
+Clone the source from GitHub::
+
+    $ git clone https://github.com/dativebase/dailp-ingest-clj.git
+
+Using Leiningen, create the standalone .jar file::
+
+    $ lein uberjar
+
+**Note: you must have Leiningen and Clojure installed.**
+
+
+Usage
+================================================================================
+
+To ingest the data from the DAILP Google Sheet sources to a specific OLD
+instance, supply a valid OLD instance's URL, username and password::
+
+    $ java -jar target/uberjar/dailp-ingest-clj-0.1.0-SNAPSHOT-standalone.jar \
+      https://some.domain.com/path/to/old/instance/ \
+      someusername \
+      somepassword
+
+For example, if you are running a local OLD instance using the DativeBase Docker
+Compose deployment method, then the following will probably work::
+
+    $ java -jar target/uberjar/dailp-ingest-clj-0.1.0-SNAPSHOT-standalone.jar \
+      http://127.0.0.1:61001/old/ \
+      admin \
+      adminA_1
+
+Alternatively, use lein run::
+
+    $ lein run \
+      https://some.domain.com/path/to/old/instance/ \
+      someusername \
+      somepassword
+
+**Note: this ingest script requires that you have read access to the Google
+Sheet files listed below.**
+
 
 Ingestion Plan
 ================================================================================
@@ -43,7 +82,7 @@ Ingestion Plan
 
    a. DF1975 (DONE):
 
-   b. DF2003:
+   b. DF2003 (DONE):
 
 
 Useful links
@@ -145,41 +184,11 @@ DF1975--Master
    of parser development. Guidance on which forms to modify?
 
 
-Installation
-================================================================================
-
-FIXME
-
-
-Usage
-================================================================================
-
-FIXME: explanation
-
-    $ java -jar dailp-ingest-clj-0.1.0-standalone.jar [args]
-
-
-Options
-================================================================================
-
-FIXME: listing of options this app accepts.
-
-
-Examples
-================================================================================
-
-...
-
-Bugs
---------------------------------------------------------------------------------
-
-...
-
 
 License
 ================================================================================
 
-Copyright © 2019 FIXME
+Copyright © 2019 Joel Dunham
 
 This program and the accompanying materials are made available under the
 terms of the Eclipse Public License 2.0 which is available at
@@ -191,20 +200,3 @@ Public License, v. 2.0 are satisfied: GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or (at your
 option) any later version, with the GNU Classpath Exception which is available
 at https://www.gnu.org/software/classpath/license.html.
-
-
-Grammar of Graphics
-================================================================================
-
-Data -      input data to visualize
-Transform - filter, aggregate, bin, etc.
-Mark -      data-representative graphics (e.g., bars)
-Encoding -  mapping between Data and Mark
-Scale -     functions that map data values to visual values
-Guides -    axes and legends
-
-Histogram is a "bar chart"
-
-Most important: Data, Mark, Encoding
-
-Example
