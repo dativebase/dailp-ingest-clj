@@ -117,6 +117,33 @@ DF1975--Master
    b. Allomorph 4 of "Modal Suffixes". What tag should be used for these? I am
       using the "mod-pre-v" tag. Is this correct?
 
+6. Morpheme break transcription conventions mismatch. I notice that different
+   transcription conventions are being used for the morpheme break line of
+   morphemes and the same line of inflected verb forms. For example, this
+   (DF2003) inflected verb::
+
+       transcription  ᎯᏕᎸᎢ
+       morpheme break /hi:-t-e:!l-v:'i/
+       morpheme gloss 2SG>AN-give.LG-PFT-FUT.IMP
+       translations   Give it (LG) to him later!
+
+   Presumably contains this 2SG>AN morpheme::
+
+       transcription  hii
+       morpheme break /hii/
+       morpheme gloss 2SG>AN
+       translations   Set A 2SG AN Pronominal Prefix
+
+   However, observer that the colon is being used to signify length in the
+   former (``hi:``) while double vowels are being used in the latter (``hii``).
+
+   Similarly, the DF2003 morpheme break values are using the glottal stop
+   Unicode character while the aspectual suffixes morpheme break values are
+   using the apostrophe.
+
+   We should probably enforce some consistency here, especially in anticipation
+   of parser development. Guidance on which forms to modify?
+
 
 Installation
 ================================================================================
@@ -164,3 +191,20 @@ Public License, v. 2.0 are satisfied: GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or (at your
 option) any later version, with the GNU Classpath Exception which is available
 at https://www.gnu.org/software/classpath/license.html.
+
+
+Grammar of Graphics
+================================================================================
+
+Data -      input data to visualize
+Transform - filter, aggregate, bin, etc.
+Mark -      data-representative graphics (e.g., bars)
+Encoding -  mapping between Data and Mark
+Scale -     functions that map data values to visual values
+Guides -    axes and legends
+
+Histogram is a "bar chart"
+
+Most important: Data, Mark, Encoding
+
+Example
