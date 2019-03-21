@@ -50,7 +50,7 @@
   [state [_ header-row & rows]]
   (let [header-row (clean-verb-header-row header-row)]
     (->> rows
-         ;; (take 4)  ;; HERE TO REDUCE FOR DEV
+         ;; (take 10)  ;; HERE TO REDUCE FOR DEV
          remove-empty-rows
          (rows->row-maps state header-row)
     )))
@@ -124,9 +124,11 @@
   [dailp-form-map simple-comments-keys]
   (string/join
    " "
-   (map (fn [[attr field-name]]
-          (format "%s: %s." field-name (attr dailp-form-map)))
-        simple-comments-keys)))
+   (->> simple-comments-keys
+        (map (fn [[attr field-name]]
+               (when-let [val (attr dailp-form-map)]
+                 (format "%s: %s." field-name val))))
+        (filter identity))))
 
 (defn compute-morpheme-break-gloss
   "Compute and return as a 2-vec the morpheme break (mb) and morpheme gloss (mb)

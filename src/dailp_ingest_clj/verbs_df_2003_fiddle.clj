@@ -11,11 +11,9 @@
   (fetch-upload-verbs-df-2003 fake-state :disable-cache false)
 
   (let [x (fetch-upload-verbs-df-2003 fake-state :disable-cache false)]
-    (-> x
-        first
-        :df-2003-verbs
-        count
-        ;; first
+    (->> (-> x first :df-2003-verbs)
+         (take 8)
+
         ))
 
 )

@@ -12,7 +12,7 @@
             [dailp-ingest-clj.resources :refer [create-resource-either]]
             [dailp-ingest-clj.verbs :refer :all]))
 
-;; WARNING DF2003 lacks :all-entires-key values for a good subset of its rows ...
+;; WARNING DF2003 lacks :all-entries-key values for a good subset of its rows ...
 
 (def df-2003-sheet-name "DF2003--Master")
 (def df-2003-worksheet-name "2003 final")
@@ -188,7 +188,7 @@
    :all-entries-key "All entries key"
    :udb-class "UDB Class"})
 
-(defmulti get-comments 
+(defmulti get-comments
   (fn [dailp-form-map _] (:verb-type dailp-form-map)))
 
 (defmethod get-comments :root
@@ -273,7 +273,7 @@
           ::ocm/morpheme_break mb
           ::ocm/morpheme_gloss mg
           ::ocm/translations (get-translations dailp-form-map
-                                               (get-translation-keys kwixer))
+                                               [(kwixer :translation)])
           ::ocm/syntactic_category (get-in state [:syntactic-categories :S :id])
           ::ocm/comments (get-comments dailp-form-map kwixer)
           ::ocm/tags [(get-in state [:tags :ingest-tag :id])]})
@@ -342,7 +342,7 @@
       ((partial filter identity))
       not-empty?))
 
-;; WARNING DF2003 lacks :all-entires-key values for a good subset of its rows ...
+;; WARNING DF2003 lacks :all-entries-key values for a good subset of its rows ...
 (defn row-map-has-root-with-key? 
   [row-map]
   (get-in row-map [:root :all-entries-key]))
@@ -354,7 +354,6 @@
 (defn remove-bad-dailp-form-maps
   [state dailp-form-maps]
   (->> dailp-form-maps
-       (filter row-map-has-root-with-key?)
        (filter row-map-has-content?)))
 
 (defn row-map->form-maps
@@ -384,8 +383,7 @@
 (defn root-is-valid?
   "Return true if the root within the supplied row map is valid."
   [row]
-  (and (:all-entries-key row)
-       (:root-morpheme-break row)
+  (and (:root-morpheme-break row)
        (->> (map (fn [k] (k row))
                  [:root-translation-1
                   :root-translation-2
@@ -438,6 +436,6 @@
                                      df-2003-max-row
                                      verbs-key)
          (apply-or-error (partial table->forms verbs-key))
-         ;; (apply-or-error (partial upload-verbs verbs-key))
-         ;; (apply-or-error (partial update-state-verbs state verbs-key))
+         (apply-or-error (partial upload-verbs verbs-key))
+         (apply-or-error (partial update-state-verbs state verbs-key))
          )))
