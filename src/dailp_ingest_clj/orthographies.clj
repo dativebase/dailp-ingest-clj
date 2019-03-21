@@ -1,23 +1,15 @@
 (ns dailp-ingest-clj.orthographies
   "Logic for ingesting DAILP orthographies."
-  (:require [clojure.java.io :as io]
-            [clojure.string :as string]
-            [clojure.pprint :as pprint]
-            [old-client.resources :refer [create-resource update-resource fetch-resources]]
+  (:require [clojure.string :as string]
             [old-client.models :refer [orthography]]
-            [old-client.utils :refer [json-parse]]
-            [dailp-ingest-clj.utils :refer [strip str->kw
+            [dailp-ingest-clj.utils :refer [apply-or-error
+                                            kw->human
+                                            strip
                                             seq-rets->ret
-                                            err->>
-                                            apply-or-error
-                                            csv-data->maps
-                                            read-csv-io]]
+                                            table->sec-of-maps]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
             [dailp-ingest-clj.old-io :refer [get-state]]
-            [clojure.data.csv :as csv])
-  (:use [slingshot.slingshot :only [throw+ try+]]))
-
-(def orthographies-file-path "resources/private/orthographies.csv")
+            [dailp-ingest-clj.resources :refer [create-resource-with-unique-attr]]))
 
 (def orthographies-sheet-name "Orthographic Inventories")
 
@@ -114,28 +106,11 @@
              (string/replace "\n" "")
              (strip " \""))))
 
-(defn tmp
-  [csv-path]
-  (with-open [reader (io/reader csv-path)]
-    (seq (csv/read-csv reader))))
-
-(defn orthographies-csv->row-maps
-  "Parse the orthographies CSV file and return a map for each row.
-  The CSV structure::
-
-      segment,       Orthography Name 1, Orthography Name 2
-      short low (L), o,                  u
-
-  returns::
-
-      {:segment \"short low (L)\"
-       :Orthography-Name-1 \"o\"
-       :Orthography-Name-2 \"u\"}
-  "
-  [csv]
-  (->> csv
-       (map fix-segment)
-       (filter #(seq (:segment %)))))
+(defn fix-orth-rows
+  [orth-rows]
+  (->> orth-rows
+       (filter #(seq (:segment %)))
+       (map fix-segment)))
 
 (defn get-base-orths-map
   "Return a map from orthography names to empty vectors."
@@ -152,13 +127,6 @@
           (.indexOf orthography-segment-order (:segment %1))
           (.indexOf orthography-segment-order (:segment %2)))
         orth-row-maps))
-
-(defn kw->human
-  "Convert a keyword like :Dog-Cat to `Dog Cat`."
-  [kw]
-  (-> kw
-      name
-      (string/replace "-" " ")))
 
 (defn assoc-row-map-to-orths-map
   "Return orths-map with the graphs in row-map appended to the values of the
@@ -197,97 +165,45 @@
             []
             orths-map)))
 
-(defn csv->rsrc-maps
-  "Convert the output of the CSV library (lazy vector of vector of stings) to
-  a seq of resource maps that can be uploaded via HTTP request to an OLD."
-  [csv]
-  (-> csv
-      csv-data->maps
-      orthographies-csv->row-maps
-      row-maps->rsrc-maps))
-
-(defn extract-orthographies
-  "Extract and process the orthographies in the CSV file at fp. The result is a
-  seq of orthoraphy resource maps."
-  [fp]
-  [(read-csv-io fp csv->rsrc-maps) nil])
-
-(defn update-orthography
-  "Update the orthography matching orthography-map by name. Return a 2-element
-  attempt vector."
-  [state orthography-map]
-  (let [existing-orthographies
-        (fetch-resources (:old-client state) :orthography)
-        orth-to-update
-        (first (filter #(= (:name orthography-map) (:name %))
-                       existing-orthographies))]
-    (try+
-     [(update-resource (:old-client state) :orthography (:id orth-to-update)
-                       orthography-map)
-      nil]
-     (catch [:status 400] {:keys [body]}
-       (if-let [error (-> body json-parse :error)]
-         (if (= error (str "The update request failed because the submitted"
-                           " data were not new."))
-           [(format (str "Update not required for orthography '%s': it already"
-                         " exists in its desired state.")
-                    (:name orthography-map)) nil]
-           [nil (format (str "Unexpected 'error' message when updating orthography"
-                             " '%s': '%s'.")
-                        (:name orthography-map)
-                        (error))])
-         [nil (format (str "Unexpected error updating orthography '%s'. No ':error'"
-                           " key in JSON body."))]))
-     (catch Object err
-       [nil (format
-             "Unknown error when attempting to update orthography named '%s': '%s'"
-             (:name orthography-map)
-             err)]))))
-
 (defn create-orthography
   "Create an orthography from orthography-map. Update an existing orthography
   if one already exists with the specified name. In all cases, return a
   2-element attempt vector."
   [state orthography-map]
-  (try+
-   (create-resource (:old-client state) :orthography orthography-map)
-   [(format "Created orthography '%s'." (:name orthography-map)) nil]
-   (catch [:status 400] {:keys [request-time headers body]}
-     (if-let [name-error (-> body json-parse :errors :name)]
-       (update-orthography state orthography-map)
-       [nil (json-parse body)]))
-   (catch Object _
-     [nil (format
-           "Unknown error when attempting to create orthography named '%s'."
-           (:name orthography-map))])))
+  (create-resource-with-unique-attr
+   state
+   orthography-map
+   :resource-name :orthography
+   :unique-attr :name))
 
 (defn upload-orthographies 
   "Upload the seq of orthography resource maps to an OLD instance."
   [state orthographies]
   (seq-rets->ret (map (partial create-orthography state) orthographies)))
 
-(defn extract-upload-orthographies
-  "Extract the orthographies from CSV and upload them to an OLD instance.
-  Should return a message string for each orthography upload attempt."
-  [state]
-  (apply-or-error
-   (partial upload-orthographies state)
-   (extract-orthographies orthographies-file-path)))
-
 (defn fetch-orthographies-from-worksheet
   [disable-cache]
-  [(-> (fetch-worksheet-caching {:spreadsheet orthographies-sheet-name
-                                 :worksheet orthographies-worksheet-name}
+  [(-> (fetch-worksheet-caching {:spreadsheet-title orthographies-sheet-name
+                                 :worksheet-title orthographies-worksheet-name
+                                 :max-row 99
+                                 :max-col 9}
                                 disable-cache)
-       csv-data->maps
-       orthographies-csv->row-maps
+       table->sec-of-maps
+       fix-orth-rows
        row-maps->rsrc-maps) nil])
+
+(defn update-state-with-orthographies
+  "Add the :orthogrpahies attribute to the state map; its value is the
+  uploaded-orthographies-ret."
+  [state uploaded-orthographies-seq]
+  [(assoc state :orthographies
+          (into {} (map (fn [o] [(:id o) o]) uploaded-orthographies-seq))) nil])
 
 (defn fetch-upload-orthographies
   "Fetch the orthographies from Google Sheets and upload them to an OLD
   instance. Should return a message string for each orthography upload attempt."
   ([state] (fetch-upload-orthographies state true))
   ([state disable-cache]
-   (apply-or-error
-    (partial upload-orthographies state)
-    (fetch-orthographies-from-worksheet disable-cache))))
+   (->> (fetch-orthographies-from-worksheet disable-cache)
+        (apply-or-error (partial upload-orthographies state))
+        (apply-or-error (partial update-state-with-orthographies state)))))

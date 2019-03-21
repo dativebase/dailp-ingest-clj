@@ -1,16 +1,17 @@
 (ns dailp-ingest-clj.tags
+  "Ingests the DAILP Tags defined in the same-named Google Sheet at
+  https://docs.google.com/spreadsheets/d/1eEk3JP2WTkP8BBShBHURrripKPredy-sCutQMiGfVmo/edit#gid=0."
   (:require [clojure.string :as string]
             [clj-time.core :as t]
-            [old-client.resources :refer [create-resource update-resource fetch-resources]]
-            [old-client.utils :refer [json-parse]]
             [clj-time.format :as f]
             [dailp-ingest-clj.utils :refer [seq-rets->ret
                                             apply-or-error
-                                            csv-data->maps]]
-            [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]])
-  (:use [slingshot.slingshot :only [throw+ try+]]))
+                                            err->>
+                                            table->sec-of-maps]]
+            [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
+            [dailp-ingest-clj.resources :refer [create-resource-with-unique-attr]]))
 
-(def ingest-tag-namespace "ingest-uchihara-root")
+(def ingest-tag-namespace "dailp-ingestion-2019")
 
 (def tags-sheet-name "DAILP Tags")
 
@@ -33,67 +34,28 @@
      :description
      (format
       "The tag for the data ingest that occurred at %s."
-      (second (string/split tag-name #":")))}))
-
-(defn update-tag
-  "Update the tag matching tag-map by name. Return a 2-element
-  attempt vector where the first element (in the success case) is the tag map."
-  [state tag-map]
-  (let [existing-tags
-        (fetch-resources (:old-client state) :tag)
-        tag-to-update
-        (first (filter #(= (:name tag-map) (:name %))
-                       existing-tags))]
-    (try+
-     [(update-resource (:old-client state) :tag (:id tag-to-update)
-                       tag-map)
-      nil]
-     (catch [:status 400] {:keys [body]}
-       (if-let [error (-> body json-parse :error)]
-         (if (= error (str "The update request failed because the submitted"
-                           " data were not new."))
-           [tag-to-update nil]
-           [nil (format (str "Unexpected 'error' message when updating tag"
-                             " '%s': '%s'.")
-                        (:name tag-map)
-                        (error))])
-         [nil (format (str "Unexpected error updating tag '%s'. No ':error'"
-                           " key in JSON body."))]))
-     (catch Object err
-       [nil (format
-             "Unknown error when attempting to update tag named '%s': '%s'"
-             (:name tag-map)
-             err)]))))
+      (second (string/split tag-name #":" 2)))}))
 
 (defn create-tag
   "Create a tag from tag-map. Update an existing tag if one already exists with
   the specified name. In all cases, return a 2-element attempt vector where the
   first element (in the success case) is the tag map."
   [state tag-map]
-  (try+
-   [(create-resource (:old-client state) :tag tag-map) nil]
-   (catch [:status 400] {:keys [body]}
-     (if-let [name-error (-> body json-parse :errors :name)]
-       (update-tag state tag-map)
-       [nil (json-parse body)]))
-   (catch Object err
-     [nil (format
-           "Unknown error when attempting to create tag named '%s': '%s'."
-           (:name tag-map)
-           err)])))
-
-(defn create-ingest-tag
-  "Create the unique tag for this ingest. Its name contains a timestamp."
-  [state]
-  (create-tag state (get-ingest-tag-map)))
+  (create-resource-with-unique-attr
+   state
+   tag-map
+   :resource-name :tag
+   :unique-attr :name))
 
 (defn fetch-tags-from-worksheet
   "Fetch the tags from the Google Sheets worksheet."
   [disable-cache]
-  [(->> (fetch-worksheet-caching {:spreadsheet tags-sheet-name
-                                  :worksheet tags-worksheet-name}
+  [(->> (fetch-worksheet-caching {:spreadsheet-title tags-sheet-name
+                                  :worksheet-title tags-worksheet-name
+                                  :max-col 2
+                                  :max-row 17}
                                  disable-cache)
-        csv-data->maps) nil])
+        table->sec-of-maps) nil])
 
 (defn fetch-all-tags
   "Fetch the tags from the GSheet and also the ingest tag."
@@ -104,7 +66,7 @@
 (defn upload-tags 
   "Upload the seq of tag resource maps to an OLD instance."
   [state tags]
-  (seq-rets->ret (map (partial create-tag state) tags)))
+  (seq-rets->ret (pmap (partial create-tag state) tags)))
 
 (defn get-tag-key
   "Return a map key for the tag: usually its name as a keyword, but ingest tag
@@ -115,7 +77,7 @@
       :ingest-tag (keyword tag-name))))
 
 (defn tags-seq->map
-  "Convert a seq of tag maps to a map from generated tag keys to tag maps."
+  "Convert a seq of tag maps to a mapping from generated tag keys to tag maps."
   [tags-seq]
   (into {} (map (fn [t] [(get-tag-key t) t]) tags-seq)))
 
@@ -123,13 +85,13 @@
   "Update state map's :tags map with the tags in uploaded-tags-ret."
   [state uploaded-tags-ret]
   (let [current-tags (:tags state)]
-    (assoc state :tags (merge current-tags (tags-seq->map uploaded-tags-ret)))))
+    [(assoc state :tags
+            (merge current-tags (tags-seq->map uploaded-tags-ret))) nil]))
 
 (defn fetch-upload-tags
   "Fetch tags from GSheets, upload them to OLD, return state map with :tags submap
   updated."
-  ([state] (fetch-upload-tags state true))
-  ([state disable-cache]
-   (->> (fetch-all-tags disable-cache)
-        (apply-or-error (partial upload-tags state))
-        (apply-or-error (partial update-state-tags state)))))
+  [state & {:keys [disable-cache] :or {disable-cache true}}]
+  (->> (fetch-all-tags disable-cache)
+       (apply-or-error (partial upload-tags state))
+       (apply-or-error (partial update-state-tags state))))

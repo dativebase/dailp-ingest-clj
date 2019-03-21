@@ -41,23 +41,39 @@
 
   (fetch-tags)  ;; from the OLD instance
 
-  (create-ingest-tag (get-state))  ;; in the OLD instance
-
   (fetch-all-tags false)
 
   (fetch-tags-from-worksheet true)  ;; from GSheets, cache disabled
 
   (fetch-tags-from-worksheet false)  ;; from GSheets, cache enabled
 
-  (fetch-upload-tags (get-state))  ;; fetch from GSheets (cache disabled) and upload to OLD
+  (fetch-upload-tags (get-state))
 
-  (fetch-upload-tags (get-state) false)  ;; fetch from GSheets (cache enabled) and upload to OLD
+  (fetch-upload-tags (get-state) :disable-cache false)
 
-  (-> (fetch-upload-tags (get-state) false)
+  (map (fn [x] (rand-int 10)) (range 10))
+
+  (time (map (fn [x] (rand-int 10)) (range 10)))
+
+  (map? "abc")
+
+  (get {:a 2} :a "dog")
+
+  (if (seq "") "y" "n")
+
+  (empty? "ab")
+
+  (if-let [a nil] a "frog")
+
+  (if-let [a false] a "frog")
+
+  (empty? "")
+
+  (-> (fetch-upload-tags (get-state) :disable-cache false)
       :tags
       keys)
 
-  (->> (fetch-upload-tags (get-state) false)
+  (->> (fetch-upload-tags (get-state) :disable-cache false)
        :tags
        (map (fn [[key {:keys [id]}]] [key id])))
 
