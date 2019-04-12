@@ -228,6 +228,27 @@
         [:allomorph-2 :cl-pre-vocalic]
         [:allomorph-3 :cl-pre-v]]})
 
+:PP [[:allomorph-1 :pp-pre-consonantal]
+     [:allomorph-2 :pp-pre-vocalic]
+     [:allomorph-3 :pp-pre-v]
+     [:allomorph-4 :pp-pre-v]]
+:PPP [[:allomorph-1 :ppp-pre-consonantal]
+      [:allomorph-2 :ppp-pre-vocalic]
+      [:allomorph-3 :ppp-elsewhere]]
+:REFL [[:allomorph-1 {:REFL :refl-pre-vocalic
+                      :MID :refl-pre-h-s}]
+       [:allomorph-2 :refl-pre-consonantal]
+       [:allomorph-3 :refl-pre-consonantal]
+       [:allomorph-4 {:REFL :refl-pre-a
+                      :MID :refl-pre-vocalic}]]
+:MOD [[:allomorph-1 :mod-pre-consonantal]
+      [:allomorph-2 :mod-pre-vocalic]
+      [:allomorph-3 :mod-pre-v]
+      [:allomorph-4 :mod-pre-v]]
+:CL [[:allomorph-1 :cl-pre-consonantal]
+     [:allomorph-2 :cl-pre-vocalic]
+     [:allomorph-3 :cl-pre-v]]
+
 (defn -affix-map->seq-of-forms
   "Given an affix map (representing a row from a spreadsheet), return a sequence
   of form maps. One spreadsheet row may represent multiple forms because

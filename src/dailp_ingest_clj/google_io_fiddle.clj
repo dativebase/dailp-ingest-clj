@@ -5,9 +5,23 @@
                                                 find-worksheet-by-title
                                                 get-cells
                                                 fetch-worksheet
+                                                add-uuids-to-sheet
                                                 fetch-worksheet-caching]]))
 
 (comment
+
+  (let [spreadsheet-title "DF1975--Master Joel Mods"
+        worksheet-title "DF1975--Master"]
+    (add-uuids-to-sheet
+     :spreadsheet-title spreadsheet-title
+     :worksheet-title worksheet-title
+     :min-col 120
+     :max-col 126
+     :min-row 3
+     :max-row 5
+     ;; :max-row 2350
+     )
+    )
 
   (download-sheet "dog")
 

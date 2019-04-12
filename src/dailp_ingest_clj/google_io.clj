@@ -1,6 +1,7 @@
 (ns dailp-ingest-clj.google-io
   "https://tech.metail.com/reading-google-sheets-from-clojure/"
-  (:require [clojure.java.io :as io])
+  (:require [clojure.java.io :as io]
+            [clojure.reflect :as r])
   (:import com.google.gdata.client.spreadsheet.SpreadsheetService
            com.google.gdata.data.spreadsheet.SpreadsheetFeed
            com.google.gdata.data.spreadsheet.WorksheetFeed
@@ -105,6 +106,70 @@
   (if-let [spreadsheet (find-spreadsheet-by-title service spreadsheet-title)]
     (if-let [worksheet (find-worksheet-by-title service spreadsheet worksheet-title)]
       (to-nested-vec (get-cells service worksheet min-col max-col min-row max-row))
+      (throw (Exception. (format "Spreadsheet '%s' has no worksheet '%s'"
+                                 spreadsheet-title worksheet-title))))
+    (throw (Exception. (format "Spreadsheet '%s' not found" spreadsheet-title)))))
+
+(defn xyz
+  [service worksheet min-col max-col min-row max-row]
+  (map
+   (memfn getCell)
+   (.getEntries (.getFeed
+                 service
+                 ;; (str (.getCellFeedUrl worksheet) "?return-empty=true")
+                 ;; (.getCellFeedUrl worksheet)
+                 (.toURL
+                  (java.net.URI.
+                   (format
+                    (str (.toString (.getCellFeedUrl worksheet))
+                         "?return-empty=true"
+                         "&min-col=%s"
+                         "&max-col=%s"
+                         "&min-row=%s"
+                         "&max-row=%s")
+                    min-col
+                    max-col
+                    min-row
+                    max-row)))
+                 CellFeed))))
+
+;; (mapv (partial mapv (memfn getValue)) (partition-by (memfn getRow) cells)))
+
+(defn do-the-thing
+  [service spreadsheet worksheet min-col max-col min-row max-row]
+  ;; (r/reflect worksheet)
+  [
+   (.getListFeedUrl worksheet)
+   (.getCellFeedUrl worksheet)
+   ]
+  )
+
+;; [spreadsheet worksheet]
+;; (to-nested-vec (xyz service worksheet min-col max-col min-row max-row))
+;; (let [stuff (xyz service worksheet min-col max-col min-row max-row)
+;;       stuff2 (partition-by (memfn getRow) stuff)]
+;;   stuff2
+;; (r/reflect stuff)
+;; (map (fn [c] (.setValue c "abc")) cells)
+;; )
+
+(defn add-uuids-to-sheet
+  [& {:keys [service
+             spreadsheet-title
+             worksheet-title
+             min-col
+             max-col
+             min-row
+             max-row]
+      :or {service (init-service)
+           min-col 1
+           max-col 30
+           min-row 1
+           max-row 1000}}]
+  (if-let [spreadsheet (find-spreadsheet-by-title service spreadsheet-title)]
+    (if-let [worksheet (find-worksheet-by-title service spreadsheet worksheet-title)]
+      (do-the-thing service spreadsheet worksheet min-col max-col min-row max-row)
+
       (throw (Exception. (format "Spreadsheet '%s' has no worksheet '%s'"
                                  spreadsheet-title worksheet-title))))
     (throw (Exception. (format "Spreadsheet '%s' not found" spreadsheet-title)))))

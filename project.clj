@@ -12,6 +12,7 @@
                  [slingshot "0.12.2"]
                  [org.onlinelinguisticdatabase/old-client "0.1.0"]
                  [com.google.api-client/google-api-client "1.21.0"]
+                 [com.google.apis/google-api-services-sheets "v4-rev30-1.22.0"]
                  [com.google.gdata/gdata-core "1.0"]
                  [com.google.gdata/gdata-spreadsheet "3.0"]]
   :checkout-deps-shares ^:replace [:source-paths :resource-paths :compile-path
