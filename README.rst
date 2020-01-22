@@ -54,34 +54,27 @@ Sheet files listed below.**
 Ingestion Plan
 ================================================================================
 
+All URLs for the Google Sheets referenced below can be obtaibed by suffixing the supplied sheet identifiers to::
+
+    https://docs.google.com/spreadsheets/d/
 1. Functional morphemes:
 
-   a. Tags (DONE):
-      https://docs.google.com/spreadsheets/d/1eEk3JP2WTkP8BBShBHURrripKPredy-sCutQMiGfVmo/edit#gid=0."
-   b. Orthographic Inventories (DONE):
-      https://docs.google.com/spreadsheets/d/16Dfq04tCSP0kuqBdMX1R3DHJ7kB6RJ3Uy7-ufN-Y_w8/edit#gid=886203972
-   c. Syntactic Categories (DONE):
-      https://docs.google.com/spreadsheets/d/159i_Cygdqsnp55QBzqJu7eozxsNEiVIiXhwEzls3q7g/edit?usp=sharing."
-   d. Prepronominal Prefixes (DONE):
-      https://docs.google.com/spreadsheets/d/12v5fqtOztwwLeEaKQJGMfziwlxP4n60riMsN9dYw9Xc/edit#gid=0
+   a. Tags (DONE): 1eEk3JP2WTkP8BBShBHURrripKPredy-sCutQMiGfVmo
+   b. Orthographic Inventories (DONE): 16Dfq04tCSP0kuqBdMX1R3DHJ7kB6RJ3Uy7-ufN-Y_w8
+   c. Syntactic Categories (DONE): 159i_Cygdqsnp55QBzqJu7eozxsNEiVIiXhwEzls3q7g
+   d. Prepronominal Prefixes (DONE): 12v5fqtOztwwLeEaKQJGMfziwlxP4n60riMsN9dYw9Xc
    e. Pronominal Prefixes (DONE):
 
-      - Combined (DONE):
-        https://docs.google.com/spreadsheets/d/1OMzkbDGY1BqPR_ZwJRe4-F5_I12Ao5OJqqMp8Ej_ZhE/edit?usp=sharing
-      - Sets A & B (DONE):
-        https://docs.google.com/spreadsheets/d/1D0JZEwE-dj-fKppbosaGhT7Xyyy4lVxmgG02tpEi8nw/edit?usp=sharing
-      - Reflexive & Middle (DONE):
-        https://docs.google.com/spreadsheets/d/1Q_q_1MZbmZ-g0bmj1sQouFFDnLBINGT3fzthPgqgkqo/edit?usp=sharing
+      - Combined (DONE): 1OMzkbDGY1BqPR_ZwJRe4-F5_I12Ao5OJqqMp8Ej_ZhE
+      - Sets A & B (DONE): 1D0JZEwE-dj-fKppbosaGhT7Xyyy4lVxmgG02tpEi8nw
+      - Reflexive & Middle (DONE): 1Q_q_1MZbmZ-g0bmj1sQouFFDnLBINGT3fzthPgqgkqo
 
-   f. Modal Suffixes (DONE):
-      https://docs.google.com/spreadsheets/d/1QWYWFeK6xy7zciIliizeW2hBfuRPNk6dK5rGJf2pdNc/edit#gid=0
-   g. Aspectual Suffixes (DONE):
-      https://docs.google.com/spreadsheets/d/19jPHtphsvWDliWq9z3WL_Fz6omHCFTFseD6fh1FLY70/edit#gid=0
+   f. Modal Suffixes (DONE): 1QWYWFeK6xy7zciIliizeW2hBfuRPNk6dK5rGJf2pdNc
+   g. Aspectual Suffixes (DONE): 19jPHtphsvWDliWq9z3WL_Fz6omHCFTFseD6fh1FLY70
 
-2. Verbs (roots and inflected forms) (1/2 DONE):
+2. Verbs (roots and inflected forms) (1/2 DONE or ALL DONE?):
 
    a. DF1975 (DONE):
-
    b. DF2003 (DONE):
 
 

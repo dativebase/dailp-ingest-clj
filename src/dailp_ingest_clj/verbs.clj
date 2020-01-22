@@ -214,7 +214,7 @@
                                  disable-cache)
         (assoc state verbs-key)) nil])
 
-(defn upload-verbs 
+(defn upload-verbs
   "Upload the seq of verb form resource maps to an OLD instance."
   [verbs-key state]
   (seq-rets->ret (map (partial create-verb state) (verbs-key state))))

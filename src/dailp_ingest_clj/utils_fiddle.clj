@@ -295,4 +295,36 @@
     )
   ) :fut)
 
+  (base26->10 "AB")
+
+  (base26->10 "A")
+
+  (base26->10 "Z")
+
+  (base26->10 "c")
+
+  (base26->10 "aa")
+
+  (base26->10 "ab")
+
+  (base26->10 "ba")
+
+  (base26->10 "aAb")
+
+  (base26->10 "abc")
+
+  ;; metered commision billing; ACH needs another solution; plan to push out to a lot of venues so that they can sign themselves up in chargify; ACH is automated clearing house.
+  ;; Friday: talk to Matt, come up with a plan for deployment and testing. Target finish by December; We don't want to promise to HP "second week of Jan" and then not have it done.
+
+  (let [x :a
+        f (^:once fn* [] (println x))]
+    (f)
+    (f))
+
+  (exp 26 2)
+
+  (int \a)
+
+  (int \b)
+
 )

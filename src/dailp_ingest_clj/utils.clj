@@ -4,7 +4,8 @@
             [clojure.set :refer [subset?]]
             [clojure.string :as string]
             [clojure.spec.alpha :as s]
-            [clojure.data.csv :as csv]))
+            [clojure.data.csv :as csv]
+            [clojure.string :as str]))
 
 (s/fdef starts-with-any?
   :args (s/cat :s string? :chrs string?)
@@ -204,6 +205,25 @@
   (-> kw
       name
       (string/replace "-" " ")))
+
+(defn exp
+  [x n]
+  (reduce * (repeat n x)))
+
+(defn base26->10
+  "Converts a string like AA to a base-26 number:
+  A   => 1
+  B   => 2
+  Z   => 26
+  AA  => 27
+  AB  => 28
+  ABC => 731 (1 * 26^2 + 2 * 26^1 + 3 + 26^0)"
+  [b26]
+  (->> b26
+       str/lower-case
+       reverse
+       (map-indexed (fn [i e] (* (exp 26 i) (- (int e) 96))))
+       (reduce +)))
 
 (comment
 

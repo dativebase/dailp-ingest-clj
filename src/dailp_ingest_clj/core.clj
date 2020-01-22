@@ -76,7 +76,10 @@
   "
   [& args]
   (if (not args)
-    (println "Please supply the URL, username and password of the OLD to upload the DAILP data to.")
+    (println
+     (str "Please supply the URL, username and password of the OLD to which the"
+          " DAILP data should be uploaded."))
+
     (do
       (println (apply (partial
                        format
