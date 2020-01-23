@@ -212,11 +212,23 @@
   (:id ((tags/get-tag-key {:name (page-ref->citation-tag-name page-ref)}) tags)))
 
 (defn get-tags
+  "Return a vector of tag IDs for the DF1975 verb form map first parameter.
+  Always include the ingest tag ID; include the citation tag ID if one can be
+  found."
   [{page-ref :df1975-page-ref}
    {{{ingest-tag-id :id} :ingest-tag :as tags} :tags :as state}]
   (if-let [citation-tag-id (find-tag-id-by-page-ref page-ref tags)]
     [ingest-tag-id citation-tag-id]
     [ingest-tag-id]))
+
+(defn get-durbin-feeling-speaker
+  [{:keys [speakers]}]
+  (->> speakers
+       vals
+       (filter (fn [{:keys [first_name last_name]}]
+                 (= [first_name last_name] ["Durbin" "Feeling"])))
+       first
+       :id))
 
 (defmethod dailp-form-map->form-map :root
   [state dailp-form-map]
@@ -231,6 +243,7 @@
           ::ocm/syntactic_category (get-in state [:syntactic-categories :V :id])
           ::ocm/source (get-in state [:sources :feeling1975cherokee :id])
           ::ocm/comments (get-comments dailp-form-map nil)
+          ::ocm/speaker (get-durbin-feeling-speaker state)
           ::ocm/tags (get-tags dailp-form-map state)})
         err (second form)]
     (if err
@@ -286,6 +299,7 @@
          ::ocm/syntactic_category (get-in state [:syntactic-categories :VP :id])
          ::ocm/source (get-in state [:sources :feeling1975cherokee :id])
          ::ocm/comments (get-comments dailp-form-map kwixer)
+         ::ocm/speaker (get-durbin-feeling-speaker state)
          ::ocm/tags (get-tags (:root dailp-form-map) state)}
         form (ocm/create-form form-to-be-validated)
         err (second form)]

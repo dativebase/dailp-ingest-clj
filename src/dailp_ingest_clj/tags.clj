@@ -64,7 +64,7 @@
   (let [fetched (fetch-tags-from-worksheet disable-cache)]
     [(conj (first fetched) (get-ingest-tag-map)) nil]))
 
-(defn upload-tags 
+(defn upload-tags
   "Upload the seq of tag resource maps to an OLD instance."
   [state tags]
   (seq-rets->ret (pmap (partial create-tag state) tags)))

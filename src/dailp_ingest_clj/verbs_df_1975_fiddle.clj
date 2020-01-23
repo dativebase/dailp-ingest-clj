@@ -7,6 +7,7 @@
             [dailp-ingest-clj.google-io :as gio]
             [dailp-ingest-clj.syntactic-categories :as syncats]
             [dailp-ingest-clj.sources :as sources]
+            [dailp-ingest-clj.speakers :as speakers]
             [dailp-ingest-clj.tags :as tags]
             [dailp-ingest-clj.utils :as u]
             [dailp-ingest-clj.verbs :as verbs]
@@ -22,6 +23,7 @@
 (def entities-meta
   {:tag [:tags tags/tags-seq->map]
    :source [:sources sources/sources-seq->map]
+   :speaker [:speakers speakers/speakers-seq->map]
    :syntactic-category [:syntactic-categories syncats/scs-seq->map]})
 
 (defn set-cached-entities
@@ -37,6 +39,7 @@
 (def set-cached-tags (partial set-cached-entities :tag))
 (def set-cached-syncats (partial set-cached-entities :syntactic-category))
 (def set-cached-sources (partial set-cached-entities :source))
+(def set-cached-speakers (partial set-cached-entities :speaker))
 
 (defn get-test-state
   [url username password]
@@ -47,7 +50,8 @@
                   old-io/get-state
                   set-cached-tags
                   set-cached-syncats
-                  set-cached-sources)]
+                  set-cached-sources
+                  set-cached-speakers)]
     state))
 
 (defn fetch-process-df-1975-verbs
@@ -98,7 +102,7 @@
 (defn get-tag-names-string
   [form state]
   (str/join
-   ","
+   ", "
   (->> form
        :old-client.models/tags
        (map
@@ -108,12 +112,34 @@
                vals
                (filter #(= t-id (:id %)))
                first
-               :name)))
-       )))
+               :name))))))
+
+(defn get-speaker-name-string
+  [state form]
+  (str/join " "
+            (-> state
+                :speakers
+                (get (-> form :old-client.models/speaker))
+                ((juxt :first_name :last_name)))))
+
+(defn show-form-translations-tags-comments
+  [state form]
+  [(-> form :old-client.models/translations first :old-client.models/transcription)
+   (get-tag-names-string form state)
+   (:old-client.models/comments form)])
+
+(defn inspect
+  [state form]
+  (conj (show-form-translations-tags-comments state form)
+        (get-speaker-name-string state form)))
 
 (comment
 
+  (speakers/fetch-upload-speakers (get-test-state url username password))
+
   (:tags (get-test-state url username password))
+
+  (:speakers (get-test-state url username password))
 
   (->> (get-test-state url username password)
        :tags
@@ -122,32 +148,22 @@
        first
        :name)
 
+  (str/join " "
+            (-> {:a "Joel" :b "Dunham"}
+                ((juxt :a :b))))
+
   (let [state (get-test-state url username password)
         verbs-key :df-1975-verbs]
     (u/just-then
      (fetch-process-df-1975-verbs state)
      (fn [state]
        (->> state
-            #_:tags
             :tmp
             :df-1975-verbs
-            #_(filter #(> 2 (count (:old-client.models/tags %))))
             (take 10)
-            (map (fn [f]
-                   [(-> f
-                        :old-client.models/translations
-                        first
-                        :old-client.models/transcription)
-                    (get-tag-names-string f state)
-                    (:old-client.models/comments f)]))
-            #_(take 2)
-            #_:citation-tags
-            #_keys
-            #_:row-maps
-            #_(map :df1975-page-ref)
-            #_set
-            #_:rows
-            #_first))))
+            #_(map (partial show-form-translations-tags-comments state))
+            (map (partial inspect state))
+            ))))
 
   (:sources @fiddle-state)
 

@@ -66,6 +66,13 @@
   [thing]
   (string/replace thing #"\s+" "-"))
 
+(defn map-hyphens->underscores
+  [m]
+  (->> m
+       (map (fn [[k v]]
+              [(if (keyword? k) (-> k name (str/replace #"-" "_") keyword) k) v]))
+       (into {})))
+
 (defn weird->hyphen
   "Replace all 'weird' chars with a hyphen."
   [thing]
@@ -95,6 +102,10 @@
       (if (seq val) val nil))))
 
 (comment
+
+  (map-hyphens->underscores {:a-b 2 :c_d 3 :d 5 "abc" 44})
+
+  (map-hyphens->underscores {:a-b 2 :a_b 44})
 
   (= (->> {:a 2 :b 3 :c nil :d false :e 0 :f ""}
           (filter second)
@@ -181,15 +192,15 @@
     `(->> [~val nil]
           ~@fns)))
 
-(defn seq-rets->ret
-  "Given a sequence of return values, return a single return value. The return
-  values are assumed to be 2-tuple vectors where the first element is a
-  success value and the second is an error message. Success has an error
-  message of nil, failure has a success value of nil. See
-  https://adambard.com/blog/acceptable-error-handling-in-clojure/."
+(defn maybes->maybe
+  "Given a sequence of maybes, return a single maybe."
   [rets]
-  (let [errs (filter some? (map second rets))]
-    (if (seq errs) [nil errs] [(map first rets) nil])))
+  (let [err (->> rets (map second) (filter some?) first)]
+    (if err
+      (nothing err)
+      (just (map first rets)))))
+
+(def seq-rets->ret maybes->maybe)
 
 (defn zipmapgroup
   "Returns a map with the keys mapped to the corresponding vals. If a key

@@ -14,6 +14,7 @@
             [dailp-ingest-clj.syntactic-categories :refer
              [fetch-upload-syntactic-categories]]
             [dailp-ingest-clj.sources :refer [fetch-upload-sources]]
+            [dailp-ingest-clj.speakers :refer [fetch-upload-speakers]]
             [dailp-ingest-clj.tags :refer [fetch-upload-tags]]
             [dailp-ingest-clj.utils :refer [apply-or-error]]
             [dailp-ingest-clj.verbs-df-1975 :refer [fetch-upload-verbs-df-1975]]
@@ -60,6 +61,7 @@
          ;; (apply-or-error merge-cached-state)
          (apply-or-error fetch-upload-tags)
          (apply-or-error fetch-upload-sources)
+         (apply-or-error fetch-upload-speakers)
          (apply-or-error fetch-upload-orthographies)
          (apply-or-error fetch-upload-syntactic-categories)
          (apply-or-error fetch-upload-ppp-forms)
