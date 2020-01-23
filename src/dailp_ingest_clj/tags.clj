@@ -9,7 +9,8 @@
                                             err->>
                                             table->sec-of-maps]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
-            [dailp-ingest-clj.resources :refer [create-resource-with-unique-attr]]))
+            [dailp-ingest-clj.resources :refer [create-resource-with-unique-attr]]
+            [dailp-ingest-clj.utils :as u]))
 
 (def ingest-tag-namespace "dailp-ingest")
 
@@ -74,7 +75,8 @@
   [tag]
   (let [tag-name (:name tag)]
     (if (string/starts-with? tag-name ingest-tag-namespace)
-      :ingest-tag (keyword tag-name))))
+      :ingest-tag
+      (-> tag-name u/clean-for-kw keyword))))
 
 (defn tags-seq->map
   "Convert a seq of tag maps to a mapping from generated tag keys to tag maps."

@@ -208,12 +208,13 @@
 (defn fetch-verbs-from-worksheet
   "Fetch the verbs from the Google Sheets worksheet."
   [disable-cache sheet-name worksheet-name max-col max-row verbs-key state]
-  [(->> (gio/fetch-worksheet-caching {:spreadsheet-title sheet-name
-                                  :worksheet-title worksheet-name
-                                  :max-col max-col
-                                  :max-row max-row}
-                                 disable-cache)
-        (assoc state verbs-key)) nil])
+  (u/just
+   (->> (gio/fetch-worksheet-caching {:spreadsheet-title sheet-name
+                                      :worksheet-title worksheet-name
+                                      :max-col max-col
+                                      :max-row max-row}
+                                     disable-cache)
+        (assoc state verbs-key))))
 
 (defn upload-verbs
   "Upload the seq of verb form resource maps to an OLD instance."

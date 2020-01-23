@@ -52,26 +52,15 @@
 
 (defn fetch-process-df-1975-verbs
   [state]
-  (let [verbs-key :df-1975-verbs]
-    (if-let [verbs (verbs-key @fiddle-state)]
-      (do (println "CACHED DF1975")
-          (assoc state verbs-key verbs))
-      (do
-        (println "FRESH DF1975")
-        (first
-         (u/just-then
-          (u/err->> state
-                    (partial verbs/fetch-verbs-from-worksheet
-                             false
-                             df-1975/df-1975-sheet-name
-                             df-1975/df-1975-worksheet-name
-                             df-1975/df-1975-max-col
-                             df-1975/df-1975-max-row
-                             verbs-key)
-                    (partial df-1975/table->forms verbs-key))
-          (fn [state]
-            (swap! fiddle-state (fn [s] (assoc s verbs-key (verbs-key state))))
-            state)))))))
+  (let [verbs-key :df-1975-verbs
+        state (update state :tmp merge
+                      {:key verbs-key :disable-cache false})]
+    (u/err->> state
+              df-1975/fetch-verbs-from-worksheet
+              df-1975/row-vecs->row-maps
+              df-1975/extract-upload-citation-tags
+              df-1975/row-maps->forms
+              #_(partial df-1975/table->forms verbs-key))))
 
 (def test-form-map
   {:impt-simple-phonetics nil,
@@ -106,7 +95,59 @@
     :impt-pp-tag nil,
     :impt-mid-refl-tag nil})
 
+(defn get-tag-names-string
+  [form state]
+  (str/join
+   ","
+  (->> form
+       :old-client.models/tags
+       (map
+        (fn [t-id]
+          (->> state
+               :tags
+               vals
+               (filter #(= t-id (:id %)))
+               first
+               :name)))
+       )))
+
 (comment
+
+  (:tags (get-test-state url username password))
+
+  (->> (get-test-state url username password)
+       :tags
+       vals
+       (filter #(= 21 (:id %)))
+       first
+       :name)
+
+  (let [state (get-test-state url username password)
+        verbs-key :df-1975-verbs]
+    (u/just-then
+     (fetch-process-df-1975-verbs state)
+     (fn [state]
+       (->> state
+            #_:tags
+            :tmp
+            :df-1975-verbs
+            #_(filter #(> 2 (count (:old-client.models/tags %))))
+            (take 10)
+            (map (fn [f]
+                   [(-> f
+                        :old-client.models/translations
+                        first
+                        :old-client.models/transcription)
+                    (get-tag-names-string f state)
+                    (:old-client.models/comments f)]))
+            #_(take 2)
+            #_:citation-tags
+            #_keys
+            #_:row-maps
+            #_(map :df1975-page-ref)
+            #_set
+            #_:rows
+            #_first))))
 
   (:sources @fiddle-state)
 
@@ -201,5 +242,4 @@
 
   (verbs/get-translation-keys (verbs/get-kwixer :impt))
 
-  ;; :impt-translation-1 "Thunder!",
 )

@@ -4,6 +4,7 @@
   (:require [old-client.core :as oc]
             [old-client.models :as ocm]
             [old-client.resources :as ocr]
+            [dailp-ingest-clj.google-io :as gio]
             [dailp-ingest-clj.old-io :as old-io]
             [dailp-ingest-clj.tags :as tags]
             [dailp-ingest-clj.utils :as u]
@@ -191,9 +192,31 @@
    (get-in dailp-form-map [:root :df1975-page-ref])
    (-> :numeric kwixer dailp-form-map)))
 
+(defn get-numeric-comments
+  [dailp-form-map kwixer]
+  (if-let [numeric (-> :numeric kwixer dailp-form-map)]
+    (format "Numeric phonetic transcription (source: Uchihara DB): %s."
+            numeric)
+    ""))
+
 (defmethod get-comments :default
   [dailp-form-map kwixer]
-  (get-feeling-numeric-comments dailp-form-map kwixer))
+  (get-numeric-comments dailp-form-map kwixer))
+
+(defn page-ref->citation-tag-name
+  [page-ref]
+  (format "Source: DF1975: %s" page-ref))
+
+(defn find-tag-id-by-page-ref
+  [page-ref tags]
+  (:id ((tags/get-tag-key {:name (page-ref->citation-tag-name page-ref)}) tags)))
+
+(defn get-tags
+  [{page-ref :df1975-page-ref}
+   {{{ingest-tag-id :id} :ingest-tag :as tags} :tags :as state}]
+  (if-let [citation-tag-id (find-tag-id-by-page-ref page-ref tags)]
+    [ingest-tag-id citation-tag-id]
+    [ingest-tag-id]))
 
 (defmethod dailp-form-map->form-map :root
   [state dailp-form-map]
@@ -208,7 +231,7 @@
           ::ocm/syntactic_category (get-in state [:syntactic-categories :V :id])
           ::ocm/source (get-in state [:sources :feeling1975cherokee :id])
           ::ocm/comments (get-comments dailp-form-map nil)
-          ::ocm/tags [(get-in state [:tags :ingest-tag :id])]})
+          ::ocm/tags (get-tags dailp-form-map state)})
         err (second form)]
     (if err
       [nil {:err err
@@ -263,7 +286,7 @@
          ::ocm/syntactic_category (get-in state [:syntactic-categories :VP :id])
          ::ocm/source (get-in state [:sources :feeling1975cherokee :id])
          ::ocm/comments (get-comments dailp-form-map kwixer)
-         ::ocm/tags [(get-in state [:tags :ingest-tag :id])]}
+         ::ocm/tags (get-tags (:root dailp-form-map) state)}
         form (ocm/create-form form-to-be-validated)
         err (second form)]
     (if err
@@ -342,8 +365,7 @@
   (->> row-map
        (row-map->dailp-form-maps state)
        (remove-bad-dailp-form-maps state)
-       (dailp-form-maps->form-maps state)
-  ))
+       (dailp-form-maps->form-maps state)))
 
 (defn row-maps->form-maps
   [state row-maps]
@@ -388,6 +410,16 @@
                [nil []])
        second))
 
+(defn row-vecs->row-maps
+  [{{rows :rows} :tmp :as state}]
+  (u/just
+   (assoc-in
+    state
+    [:tmp :row-maps]
+    (->> rows
+         verbs/table->row-maps
+         project-roots))))
+
 (defn table->forms
   "Convert a table data structure (vec of vecs of strings) to a seq of OLD forms
   (maps). The input table is at (verbs-key state). The output seq of form maps
@@ -406,18 +438,79 @@
                      (assoc-in [:warnings verbs-key]
                                (->> r :warnings (map second))))))) nil])
 
+(defn extract-citation-tags
+  [{{:keys [row-maps]} :tmp :as state}]
+  (u/just
+   (assoc-in state [:tmp :citation-tags]
+             (->> row-maps
+                  (map :df1975-page-ref)
+                  set
+                  (filter some?)
+                  (map (fn [page-ref]
+                         {:name (format "Source: DF1975: %s" page-ref)
+                          :description
+                          (format
+                           (str "This form was taken from Cherokee-English"
+                                " Dictionary, Durbin Feeling, 1975: %s.")
+                           page-ref)}))))))
+
+(defn upload-citation-tags
+  [{{:keys [citation-tags]} :tmp existing-tags :tags :as state}]
+  (u/just-then
+   (->> citation-tags
+        (filter (fn [tag]
+                  (not ((tags/get-tag-key tag) existing-tags))))
+        (tags/upload-tags state))
+   (fn [uploaded-tags] (assoc-in state [:tmp :uploaded-citation-tags]
+                                 uploaded-tags))))
+
+(defn extract-upload-citation-tags
+  [state]
+  (u/just-then
+   (u/err->> state
+             extract-citation-tags
+             upload-citation-tags)
+   (fn [{{citation-tags :uploaded-citation-tags} :tmp :as state}]
+     (update state :tags merge
+             (->> citation-tags
+                  (map (fn [tag] [(tags/get-tag-key tag) tag]))
+                  (into {}))))))
+
+(defn fetch-verbs-from-worksheet
+  [{{:keys [disable-cache]} :tmp :as state}]
+  (u/just
+   (assoc-in
+    state
+    [:tmp :rows]
+    (gio/fetch-worksheet-caching {:spreadsheet-title df-1975-sheet-name
+                                  :worksheet-title df-1975-worksheet-name
+                                  :max-col df-1975-max-col
+                                  :max-row df-1975-max-row}
+                                 disable-cache))))
+
+(defn row-maps->forms
+  [{{verbs-key :key row-maps :row-maps} :tmp :as state}]
+  (u/just
+   (->> row-maps
+        (row-maps->form-maps state)
+        (group-by (fn [[_ err]] (if err :warnings :verbs)))
+        ((fn [r]
+           (-> state
+                     (assoc-in [:tmp verbs-key] (->> r :verbs (map first)))
+                     (assoc-in [:warnings verbs-key]
+                               (->> r :warnings (map second)))))))))
+
 (defn fetch-upload-verbs-df-1975
   "Fetch verbs from Google Sheets, upload them to OLD, return state map with
   verbs-type-key submap updated."
   [state & {:keys [disable-cache] :or {disable-cache true}}]
   (let [verbs-key :df-1975-verbs]
-    (->> state
-         (verbs/fetch-verbs-from-worksheet disable-cache
-                                     df-1975-sheet-name
-                                     df-1975-worksheet-name
-                                     df-1975-max-col
-                                     df-1975-max-row
-                                     verbs-key)
-         (u/apply-or-error (partial table->forms verbs-key))
-         (u/apply-or-error (partial verbs/upload-verbs verbs-key))
-         (u/apply-or-error (partial verbs/update-state-verbs state verbs-key)))))
+    (u/err->> (update state :tmp merge {:key :df-1975-verbs
+                                        :disable-cache disable-cache})
+              fetch-verbs-from-worksheet
+              row-vecs->row-maps
+              extract-upload-citation-tags
+              row-maps->forms
+              #_(u/apply-or-error (partial table->forms verbs-key))
+              #_(u/apply-or-error (partial verbs/upload-verbs verbs-key))
+              #_(u/apply-or-error (partial verbs/update-state-verbs state verbs-key)))))

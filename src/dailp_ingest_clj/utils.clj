@@ -77,7 +77,7 @@
   (-> str-th
       string/trim
       string/lower-case
-      (string/replace #"[\(\),]" "")
+      (string/replace #"[\(\),:]" "")
       (string/replace #"/" "-")
       weird->hyphen
       (strip "-")))
