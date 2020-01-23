@@ -414,7 +414,7 @@
   [verbs-key state]
   [(->> state
         verbs-key
-        (table->row-maps state)
+        table->row-maps
         project-roots
         (row-maps->form-maps state)
         (group-by (fn [[val err]] (if err :warnings :verbs)))

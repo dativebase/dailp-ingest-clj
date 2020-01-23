@@ -1,5 +1,5 @@
 (ns dailp-ingest-clj.syntactic-categories
-  "Logic for ingesting DAILP syntactic categories from the Google Sheet at
+    "Logic for ingesting DAILP syntactic categories from the Google Sheet at
   https://docs.google.com/spreadsheets/d/159i_Cygdqsnp55QBzqJu7eozxsNEiVIiXhwEzls3q7g/edit?usp=sharing."
   (:require [old-client.models :refer [syntactic-category]]
             [dailp-ingest-clj.utils :refer [seq-rets->ret
@@ -36,7 +36,7 @@
   [(->> (fetch-worksheet-caching {:spreadsheet-title syntactic-categories-sheet-name
                                   :worksheet-title syntactic-categories-worksheet-name
                                   :max-col 3
-                                  :max-row 9}
+                                  :max-row 10}
                                  disable-cache)
        table->sec-of-maps
        (map (fn [sc] (merge syntactic-category sc)))) nil])

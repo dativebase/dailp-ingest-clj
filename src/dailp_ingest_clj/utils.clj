@@ -96,6 +96,13 @@
 
 (comment
 
+  (= (->> {:a 2 :b 3 :c nil :d false :e 0 :f ""}
+          (filter second)
+          (into {}))
+     (->> {:a 2 :b 3 :c nil :d false :e 0 :f ""}
+          (filter (fn [[k v]] v))
+          (into {})))
+
   (let [rows [["a" nil] [nil " "]]]
     (->> (take 2 rows)
          (map (fn [row] (map empty-str-or-nil->nil row)))
@@ -132,18 +139,40 @@
 
 )
 
+(defn just
+  [x]
+  [x nil])
+
+(defn nothing
+  [error]
+  [nil error])
+
+(defn just-then
+  "Given a maybe (`[just error]`) and a then function that returns a value given
+  the `just` as input, return that value, or a nothing (`[nil error]`) if
+  `error` is truthy."
+  ([maybe then-fn] (just-then maybe then-fn identity))
+  ([[val error] then-fn error-fn]
+   (if error
+     (nothing (error-fn error))
+     (just (then-fn val)))))
+
 ;; See https://adambard.com/blog/acceptable-error-handling-in-clojure/."
 (defn apply-or-error
+  "Call f on val if err is nil, otherwise return [nil err]
+  See https://adambard.com/blog/acceptable-error-handling-in-clojure/."
   [f [val err]]
   (if (nil? err)
     (f val)
-    [nil err]))
+    (nothing err)))
+
+(def bind apply-or-error)
 
 (defmacro err->>
   [val & fns]
   `(->> [~val nil]
         ~@(map (fn [f]
-                 `(apply-or-error ~f))
+                 `(bind ~f))
                fns)))
 
 ;; See https://adambard.com/blog/acceptable-error-handling-in-clojure/."
@@ -225,7 +254,15 @@
        (map-indexed (fn [i e] (* (exp 26 i) (- (int e) 96))))
        (reduce +)))
 
+(defn full-stop
+  [s]
+  (if (re-find #"[\.\?!]$" s)
+    s
+    (str s ".")))
+
 (comment
+
+  (full-stop "abc!")
 
   (seq-rets->ret (list))
 

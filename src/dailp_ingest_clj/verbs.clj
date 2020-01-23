@@ -1,14 +1,11 @@
 (ns dailp-ingest-clj.verbs
   "Common logic for ingesting DAILP verbs."
-  (:require [clojure.string :as string]
+  (:require [clojure.string :as str]
             [clojure.pprint :as pprint]
-            [old-client.models :as ocm :refer [form create-form]]
-            [dailp-ingest-clj.utils :refer [apply-or-error
-                                            empty-str-or-nil->nil
-                                            seq-rets->ret
-                                            str->kw]]
-            [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
-            [dailp-ingest-clj.resources :refer [create-resource-either]]))
+            [dailp-ingest-clj.utils :as u]
+            [dailp-ingest-clj.google-io :as gio]
+            [dailp-ingest-clj.resources :as rs]
+            [old-client.models :as ocm]))
 
 (def fixme-translation "FIXME TRANSLATION NEEDED")
 (def fixme-morpheme-gloss "FIXME.MORPHEME.GLOSS.NEEDED")
@@ -17,42 +14,42 @@
   "Create a verb from verb-map. Return a 2-element attempt vector where the
   first element (in the success case) is the verb map."
   [state verb-map]
-  (create-resource-either state verb-map :resource-name :form))
+  (rs/create-resource-either state verb-map :resource-name :form))
 
 (defn clean-verb-header-row
   [verb-header-row]
-  (->> verb-header-row (map (fn [v] (if (nil? v) v (str->kw v))))))
+  (->> verb-header-row (map (fn [v] (if (nil? v) v (u/str->kw v))))))
 
 (defn remove-empty-rows
   "Remove all rows (seqs) that consist of only nils and/or empty strings."
   [rows]
   (->> rows
-       (map (fn [row] (map empty-str-or-nil->nil row)))
+       (map (fn [row] (map u/empty-str-or-nil->nil row)))
        (filter #(not (every? nil? %)))))
 
 (defn row->row-maps
   "Given a row (seq of strings and/or nils), return a map from keys in
   isomorphic header row to vals in row."
-  [state header-row row]
+  [header-row row]
   (->> row
-       (map #(do [%1 %2]) header-row)
+       (map (fn [k v] [k v]) header-row)
        (into {})))
 
 (defn rows->row-maps
-  [state header-row rows]
+  [header-row rows]
   (reduce
    (fn [agg row]
-     (conj agg (row->row-maps state header-row row)))
+     (conj agg (row->row-maps header-row row)))
    []
    rows))
 
 (defn table->row-maps
-  [state [_ header-row & rows]]
+  [[_ header-row & rows]]
   (let [header-row (clean-verb-header-row header-row)]
     (->> rows
          ;; (take 10)  ;; HERE TO REDUCE FOR DEV
          remove-empty-rows
-         (rows->row-maps state header-row)
+         (rows->row-maps header-row)
     )))
 
 (defn is-good-root-map?
@@ -80,7 +77,7 @@
   (let [actual-translations
         (->> translation-keys
              (map (fn [k]
-                    (if-let [v (-> k dailp-form-map empty-str-or-nil->nil)]
+                    (if-let [v (-> k dailp-form-map u/empty-str-or-nil->nil)]
                       {::ocm/transcription v ::ocm/grammaticality ""}
                       nil)))
              (filter identity)
@@ -93,7 +90,7 @@
 
 (defn translation->morpheme-gloss
   [translation]
-  (string/replace translation #"\s+" "."))
+  (str/replace translation #"\s+" "."))
 
 (defn get-morpheme-gloss
   [dailp-form-map translations]
@@ -121,12 +118,12 @@
 
 (defn get-simple-field-value-comments
   [dailp-form-map simple-comments-keys]
-  (string/join
+  (str/join
    " "
    (->> simple-comments-keys
         (map (fn [[attr field-name]]
                (when-let [val (attr dailp-form-map)]
-                 (format "%s: %s." field-name val))))
+                 (format "%s: %s" field-name (u/full-stop val)))))
         (filter identity))))
 
 (defn compute-morpheme-break-gloss
@@ -136,8 +133,13 @@
   (->> getter-vecs
        (map (fn [key-path] (get-in dailp-form-map key-path)))
        (partition 2)
-       (filter (fn [toople] (not (some (zipmap [nil] (repeat true)) toople))))
-       (apply (partial map (fn [& args] (string/join "-" args))))))
+       #_(filter (fn [toople] (not (some (zipmap [nil] (repeat true)) toople))))
+       #_(apply (partial map (fn [& args] (str/join "-" args))))
+       (filter (fn [x] (not (some nil? x))))
+       ((fn [pairs]
+          (if (seq pairs)
+            (apply (partial map (fn [& args] (str/join "-" args))) pairs)
+            [nil nil])))))
 
 (defn get-kwixer
   "Given a prefix keyword, return a function that will prefix that keyword to
@@ -147,13 +149,13 @@
     (->> suffix-kw
          (list prefix-kw)
          (map name)
-         (string/join "-")
+         (str/join "-")
          keyword)))
 
 (defn succinct!
   [dailp-form-map]
   (->> dailp-form-map
-       (filter (fn [[k v]] v))
+       (filter second)
        (into {})
        (#(dissoc % :root :verb-type))))
 
@@ -170,7 +172,7 @@
 (defn is-transcription-type-key?
   [k]
   (let [n (name k)]
-    (some true? (map #(string/ends-with? n %) transcription-type-suffixes))))
+    (some true? (map #(str/ends-with? n %) transcription-type-suffixes))))
 
 (defn get-transcription-type-keys
   [dailp-form-map]
@@ -198,16 +200,15 @@
                                          (not (map? v)))))
                 seq)]
     (do
-      (when border (println (string/join (take 80 (repeat \-)))))
+      (when border (println (str/join (take 80 (repeat \-)))))
       (pprint/pprint good-vals)
       (pprint/pprint (get-in bad [:root :all-entries-key]))
-      (pprint/pprint (:all-entries-key))
-      (when border (println (string/join (take 80 (repeat \-))))))))
+      (when border (println (str/join (take 80 (repeat \-))))))))
 
 (defn fetch-verbs-from-worksheet
   "Fetch the verbs from the Google Sheets worksheet."
   [disable-cache sheet-name worksheet-name max-col max-row verbs-key state]
-  [(->> (fetch-worksheet-caching {:spreadsheet-title sheet-name
+  [(->> (gio/fetch-worksheet-caching {:spreadsheet-title sheet-name
                                   :worksheet-title worksheet-name
                                   :max-col max-col
                                   :max-row max-row}
@@ -217,7 +218,7 @@
 (defn upload-verbs
   "Upload the seq of verb form resource maps to an OLD instance."
   [verbs-key state]
-  (seq-rets->ret (map (partial create-verb state) (verbs-key state))))
+  (u/seq-rets->ret (map (partial create-verb state) (verbs-key state))))
 
 (defn verbs-seq->map
   "Convert a seq of verb form maps to a mapping from int ids to form maps."

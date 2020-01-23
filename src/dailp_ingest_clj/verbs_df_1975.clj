@@ -1,16 +1,14 @@
 (ns dailp-ingest-clj.verbs-df-1975
   "Logic for ingesting DAILP verbs from the Google Sheets DF1975--Master:
   https://docs.google.com/spreadsheets/d/11ssqdimOQc_hp3Zk8Y55m6DFfKR96OOpclUg5wcGSVE/edit?usp=sharing."
-  (:require [clojure.string :as string]
-            [clojure.pprint :as pprint]
-            [old-client.models :as ocm :refer [form create-form]]
-            [dailp-ingest-clj.utils :refer [apply-or-error
-                                            empty-str-or-nil->nil
-                                            seq-rets->ret
-                                            str->kw]]
-            [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
-            [dailp-ingest-clj.resources :refer [create-resource-either]]
-            [dailp-ingest-clj.verbs :refer :all]))
+  (:require [old-client.core :as oc]
+            [old-client.models :as ocm]
+            [old-client.resources :as ocr]
+            [dailp-ingest-clj.old-io :as old-io]
+            [dailp-ingest-clj.tags :as tags]
+            [dailp-ingest-clj.utils :as u]
+            [dailp-ingest-clj.verbs :as verbs]
+            [clojure.pprint :as pprint]))
 
 (def df-1975-sheet-name "DF1975--Master")
 (def df-1975-worksheet-name "DF1975--Master")
@@ -162,13 +160,13 @@
 (defn row-map->dailp-form-maps
   "Given a row map (from a GSheet extraction), return a DAILP form map, i.e.,
   a map whose key/value pairs are from the GSheet and are largely unmodified."
-  [state row-map]
+  [_ row-map]
   (let [seq-of-form-maps (row-map->seq-of-form-maps row-map)]
-    (map (fn [m] (assoc m :root (get-root-map seq-of-form-maps)))
+    (map (fn [m] (assoc m :root (verbs/get-root-map seq-of-form-maps)))
          seq-of-form-maps)))
 
 (defmulti dailp-form-map->form-map
-  (fn [state dailp-form-map] (:verb-type dailp-form-map)))
+  (fn [_ dailp-form-map] (:verb-type dailp-form-map)))
 
 (def root-simple-comments-keys
   {:transitivity "Transitivity"
@@ -180,8 +178,9 @@
   (fn [dailp-form-map _] (:verb-type dailp-form-map)))
 
 (defmethod get-comments :root
-  [dailp-form-map kwixer]
-  (get-simple-field-value-comments dailp-form-map root-simple-comments-keys))
+  [dailp-form-map _]
+  (verbs/get-simple-field-value-comments dailp-form-map
+                                         root-simple-comments-keys))
 
 (defn get-feeling-numeric-comments
   "Return standard verb form comments: a Feeling 1975 reference and the
@@ -198,14 +197,16 @@
 
 (defmethod dailp-form-map->form-map :root
   [state dailp-form-map]
-  (let [translations (get-translations dailp-form-map root-translation-keys)
+  (let [translations (verbs/get-translations dailp-form-map
+                                             verbs/root-translation-keys)
         form
-        (create-form
+        (ocm/create-form
          {::ocm/transcription (:root-morpheme-break dailp-form-map)
           ::ocm/morpheme_break (:root-morpheme-break dailp-form-map)
-          ::ocm/morpheme_gloss (get-morpheme-gloss dailp-form-map translations)
+          ::ocm/morpheme_gloss (verbs/get-morpheme-gloss dailp-form-map translations)
           ::ocm/translations translations
           ::ocm/syntactic_category (get-in state [:syntactic-categories :V :id])
+          ::ocm/source (get-in state [:sources :feeling1975cherokee :id])
           ::ocm/comments (get-comments dailp-form-map nil)
           ::ocm/tags [(get-in state [:tags :ingest-tag :id])]})
         err (second form)]
@@ -243,32 +244,34 @@
   :prs-h-grade that identifies the grammatical inflection of the surface
   verb form."
   [state dailp-form-map inflection]
-  (let [kwixer (get-kwixer inflection)
-        [mb mg] (compute-morpheme-break-gloss
+  (let [kwixer (verbs/get-kwixer inflection)
+        [mb mg] (verbs/compute-morpheme-break-gloss
                  dailp-form-map (get-standard-mb-mg-getter-vecs
                                  kwixer inflection))
         mb (or mb "")
         mg (or mg "")
-        form
-        (create-form
-         {::ocm/narrow_phonetic_transcription
-          (or ((kwixer :surface-form) dailp-form-map) "")
-          ::ocm/phonetic_transcription
-          (or ((kwixer :simple-phonetics) dailp-form-map) "")
-          ::ocm/transcription (or ((kwixer :syllabary) dailp-form-map) mb)
-          ::ocm/morpheme_break mb
-          ::ocm/morpheme_gloss mg
-          ::ocm/translations (get-translations dailp-form-map
-                                               (get-translation-keys kwixer))
-          ::ocm/syntactic_category (get-in state [:syntactic-categories :S :id])
-          ::ocm/comments (get-comments dailp-form-map kwixer)
-          ::ocm/tags [(get-in state [:tags :ingest-tag :id])]})
+        form-to-be-validated
+        {::ocm/narrow_phonetic_transcription
+         (or ((kwixer :surface-form) dailp-form-map) "")
+         ::ocm/phonetic_transcription
+         (or ((kwixer :simple-phonetics) dailp-form-map) "")
+         ::ocm/transcription (or ((kwixer :syllabary) dailp-form-map) mb)
+         ::ocm/morpheme_break mb
+         ::ocm/morpheme_gloss mg
+         ::ocm/translations (verbs/get-translations dailp-form-map
+                                                    (verbs/get-translation-keys kwixer))
+         ::ocm/syntactic_category (get-in state [:syntactic-categories :VP :id])
+         ::ocm/source (get-in state [:sources :feeling1975cherokee :id])
+         ::ocm/comments (get-comments dailp-form-map kwixer)
+         ::ocm/tags [(get-in state [:tags :ingest-tag :id])]}
+        form (ocm/create-form form-to-be-validated)
         err (second form)]
     (if err
       [nil {:err err
             :all-entries-key (get-in dailp-form-map [:root :all-entries-key])
             :inflection inflection
-            :dailp-form-map (succinct! dailp-form-map)}]
+            :dailp-form-map (verbs/succinct! dailp-form-map)
+            :form-before-validation form-to-be-validated}]
       form)))
 
 (defmethod dailp-form-map->form-map :prs-glot-grade
@@ -318,7 +321,7 @@
       (#(select-keys row-map %))
       vals
       ((partial filter identity))
-      not-empty?))
+      verbs/not-empty?))
 
 (defn row-map-has-root-with-key?
   [row-map]
@@ -329,7 +332,7 @@
   (not (row-map-has-root-with-key? row-map)))
 
 (defn remove-bad-dailp-form-maps
-  [state dailp-form-maps]
+  [_ dailp-form-maps]
   (->> dailp-form-maps
        (filter row-map-has-root-with-key?)
        (filter row-map-has-content?)))
@@ -394,10 +397,10 @@
   [verbs-key state]
   [(->> state
         verbs-key
-        (table->row-maps state)
+        verbs/table->row-maps
         project-roots
         (row-maps->form-maps state)
-        (group-by (fn [[val err]] (if err :warnings :verbs)))
+        (group-by (fn [[_ err]] (if err :warnings :verbs)))
         ((fn [r] (-> state
                      (assoc verbs-key (->> r :verbs (map first)))
                      (assoc-in [:warnings verbs-key]
@@ -409,12 +412,12 @@
   [state & {:keys [disable-cache] :or {disable-cache true}}]
   (let [verbs-key :df-1975-verbs]
     (->> state
-         (fetch-verbs-from-worksheet disable-cache
+         (verbs/fetch-verbs-from-worksheet disable-cache
                                      df-1975-sheet-name
                                      df-1975-worksheet-name
                                      df-1975-max-col
                                      df-1975-max-row
                                      verbs-key)
-         (apply-or-error (partial table->forms verbs-key))
-         (apply-or-error (partial upload-verbs verbs-key))
-         (apply-or-error (partial update-state-verbs state verbs-key)))))
+         (u/apply-or-error (partial table->forms verbs-key))
+         (u/apply-or-error (partial verbs/upload-verbs verbs-key))
+         (u/apply-or-error (partial verbs/update-state-verbs state verbs-key)))))

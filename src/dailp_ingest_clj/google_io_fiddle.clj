@@ -1,18 +1,29 @@
 (ns dailp-ingest-clj.google-io-fiddle
-  (:require [dailp-ingest-clj.google-io :refer [init-service
-                                                find-spreadsheet-by-title
-                                                list-worksheets
-                                                find-worksheet-by-title
-                                                get-cells
-                                                fetch-worksheet
-                                                add-uuids-to-sheet
-                                                fetch-worksheet-caching]]))
+  (:require [dailp-ingest-clj.google-io :as gio]))
 
 (comment
 
+  (->> {:spreadsheet-title "DF1975--Master"
+        :worksheet-title "DF1975--Master"
+        :max-col 119
+        :max-row 2350}
+       (get @gio/worksheet-cache)
+       (drop 2)
+       (take 3))
+
+  (find {{:a 2} 2} {:a 2})
+
+  (get {{:a 2} 2} {:a 2})
+
+  (find {:a 2} :a)
+
+  (get {:a 2} :a)
+
+  (keys @gio/worksheet-cache)
+
   (let [spreadsheet-title "DF1975--Master Joel Mods"
         worksheet-title "DF1975--Master"]
-    (add-uuids-to-sheet
+    (gio/add-uuids-to-sheet
      :spreadsheet-title spreadsheet-title
      :worksheet-title worksheet-title
      :min-col 120
@@ -25,44 +36,47 @@
 
   (download-sheet "dog")
 
-  (init-service)
+  (let [service (gio/init-service)]
+    (gio/find-spreadsheet-by-title service "Pronominal Prefixes--Sets A & B"))
 
-  (let [service (init-service)]
-    (find-spreadsheet-by-title service "Dingus McGregor"))
+  (gio/init-service)
 
-  (let [service (init-service)
-        spreadsheet (find-spreadsheet-by-title service "Dingus McGregor")
-        worksheets (list-worksheets service spreadsheet)]
+  (let [service (gio/init-service)]
+    (gio/find-spreadsheet-by-title service "Dingus McGregor"))
+
+  (let [service (gio/init-service)
+        spreadsheet (gio/find-spreadsheet-by-title service "Dingus McGregor")
+        worksheets (gio/list-worksheets service spreadsheet)]
     (map (fn [ws] (.getPlainText (.getTitle ws))) worksheets))
 
-  (let [service (init-service)
-        spreadsheet (find-spreadsheet-by-title service "Dingus McGregor")
-        worksheets (list-worksheets service spreadsheet)]
+  (let [service (gio/init-service)
+        spreadsheet (gio/find-spreadsheet-by-title service "Dingus McGregor")
+        worksheets (gio/list-worksheets service spreadsheet)]
     (map (fn [ws] (.getPlainText (.getTitle ws))) worksheets))
 
-  (let [service (init-service)
-        spreadsheet (find-spreadsheet-by-title service "Dingus McGregor")
-        worksheet (find-worksheet-by-title service spreadsheet "topaz")
-        cells (get-cells service worksheet)]
+  (let [service (gio/init-service)
+        spreadsheet (gio/find-spreadsheet-by-title service "Dingus McGregor")
+        worksheet (gio/find-worksheet-by-title service spreadsheet "topaz")
+        cells (gio/get-cells service worksheet)]
     cells)
 
-  (let [service (init-service)]
-    (fetch-worksheet service
+  (let [service (gio/init-service)]
+    (gio/fetch-worksheet service
                      {:spreadsheet "Dingus McGregor"
                       :worksheet "topaz"}))
 
-  (let [service (init-service)]
-    (fetch-worksheet service
+  (let [service (gio/init-service)]
+    (gio/fetch-worksheet service
                      {:spreadsheet "Orthographic Inventories"
                       :worksheet "Sheet1"}))
 
-  (fetch-worksheet {:spreadsheet "Orthographic Inventories"
+  (gio/fetch-worksheet {:spreadsheet "Orthographic Inventories"
                     :worksheet "Sheet1"})
 
-  (fetch-worksheet-caching {:spreadsheet "Orthographic Inventories"
+  (gio/fetch-worksheet-caching {:spreadsheet "Orthographic Inventories"
                             :worksheet "Sheet1"})
 
-  (fetch-worksheet-caching {:spreadsheet "Orthographic Inventories"
+  (gio/fetch-worksheet-caching {:spreadsheet "Orthographic Inventories"
                             :worksheet "Sheet1"}
                            true)
 

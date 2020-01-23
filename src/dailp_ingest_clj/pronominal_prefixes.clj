@@ -19,7 +19,8 @@
 (def c-pps-max-col 13)
 (def c-pps-max-row 27)
 
-(def ab-pps-sheet-name "Sets A & B Pronominal Prefixes")
+(def ab-pps-sheet-name-DEPRECATED "Sets A & B Pronominal Prefixes")
+(def ab-pps-sheet-name "Pronominal Prefixes--Sets A & B")
 (def ab-pps-worksheet-name "Sheet1")
 (def ab-pps-max-col 15)
 (def ab-pps-max-row 30)
