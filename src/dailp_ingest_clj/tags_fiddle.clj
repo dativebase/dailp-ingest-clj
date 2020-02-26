@@ -43,6 +43,8 @@
 
   (fetch-tags-from-worksheet false)  ;; from GSheets, cache enabled
 
+  (get-state)
+
   (fetch-upload-tags (get-state))
 
   (fetch-upload-tags (get-state) :disable-cache false)

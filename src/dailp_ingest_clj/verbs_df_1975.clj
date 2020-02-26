@@ -1,15 +1,21 @@
 (ns dailp-ingest-clj.verbs-df-1975
   "Logic for ingesting DAILP verbs from the Google Sheets DF1975--Master:
   https://docs.google.com/spreadsheets/d/11ssqdimOQc_hp3Zk8Y55m6DFfKR96OOpclUg5wcGSVE/edit?usp=sharing."
-  (:require [old-client.core :as oc]
-            [old-client.models :as ocm]
-            [old-client.resources :as ocr]
+  (:require [clojure.pprint :as pprint]
+            [clojure.spec.alpha :as s]
             [dailp-ingest-clj.google-io :as gio]
             [dailp-ingest-clj.old-io :as old-io]
+            [dailp-ingest-clj.specs :as specs]
             [dailp-ingest-clj.tags :as tags]
             [dailp-ingest-clj.utils :as u]
             [dailp-ingest-clj.verbs :as verbs]
-            [clojure.pprint :as pprint]))
+            [old-client.core :as oc]
+            [old-client.models :as ocm]
+            [old-client.resources :as ocr]
+            [clojure.spec.alpha :as spec]))
+
+(s/def ::citation-tags ::specs/tags)
+(s/def ::citation-tags-map ::specs/tags-map)
 
 (def df-1975-sheet-name "DF1975--Master")
 (def df-1975-worksheet-name "DF1975--Master")
@@ -216,7 +222,7 @@
   Always include the ingest tag ID; include the citation tag ID if one can be
   found."
   [{page-ref :df1975-page-ref}
-   {{{ingest-tag-id :id} :ingest-tag :as tags} :tags :as state}]
+   {{{ingest-tag-id :id} :ingest-tag :as tags} ::specs/tags-map :as state}]
   (if-let [citation-tag-id (find-tag-id-by-page-ref page-ref tags)]
     [ingest-tag-id citation-tag-id]
     [ingest-tag-id]))
@@ -374,19 +380,20 @@
        (filter row-map-has-root-with-key?)
        (filter row-map-has-content?)))
 
-(defn row-map->form-maps
-  [state row-map]
-  (->> row-map
+(defn row->forms
+  [state row]
+  (->> row
        (row-map->dailp-form-maps state)
        (remove-bad-dailp-form-maps state)
        (dailp-form-maps->form-maps state)))
 
-(defn row-maps->form-maps
-  [state row-maps]
-  (reduce (fn [agg row-map]
-            (concat agg (row-map->form-maps state row-map)))
-          ()
-          row-maps))
+(defn rows->forms
+  "Return a sequence of Maybe vectors of forms."
+  [{:keys [::specs/rows] :as state}]
+  (printf "Getting forms from %s rows" (count rows))
+  (assoc state
+         ::specs/forms
+         (reduce (fn [acc row] (concat acc (row->forms state row))) () rows)))
 
 (defn fix-key-less-row
   "Fix row by adding to it all of the root-targeting attr/vals that row lacks
@@ -424,107 +431,113 @@
                [nil []])
        second))
 
-(defn row-vecs->row-maps
-  [{{rows :rows} :tmp :as state}]
+(defn calculate-rows
+  "Given a `::specs/worksheet` vector of vectors, create a `::specs/rows` vector
+  of row maps under `::specs/rows`."
+  [{:keys [::specs/worksheet] :as state}]
   (u/just
-   (assoc-in
+   (assoc
     state
-    [:tmp :row-maps]
-    (->> rows
+    ::specs/rows
+    (->> worksheet
          verbs/table->row-maps
          project-roots))))
 
-(defn table->forms
-  "Convert a table data structure (vec of vecs of strings) to a seq of OLD forms
-  (maps). The input table is at (verbs-key state). The output seq of form maps
-  will be re-stored at the same key of state. Any errors produced while
-  generating the form maps will be stored as warnings under
-  (get-in state [:warnings verbs-key])."
-  [verbs-key state]
-  [(->> state
-        verbs-key
-        verbs/table->row-maps
-        project-roots
-        (row-maps->form-maps state)
-        (group-by (fn [[_ err]] (if err :warnings :verbs)))
-        ((fn [r] (-> state
-                     (assoc verbs-key (->> r :verbs (map first)))
-                     (assoc-in [:warnings verbs-key]
-                               (->> r :warnings (map second))))))) nil])
-
 (defn extract-citation-tags
-  [{{:keys [row-maps]} :tmp :as state}]
+  "Set `::citation-tags` to a sequence of tag maps, one for each unique
+  `:df1975-page-ref` value from the spreadsheet rows."
+  [{:keys [::specs/rows] :as state}]
   (u/just
-   (assoc-in state [:tmp :citation-tags]
-             (->> row-maps
-                  (map :df1975-page-ref)
-                  set
-                  (filter some?)
-                  (map (fn [page-ref]
-                         {:name (format "Source: DF1975: %s" page-ref)
-                          :description
-                          (format
-                           (str "This form was taken from Cherokee-English"
-                                " Dictionary, Durbin Feeling, 1975: %s.")
-                           page-ref)}))))))
+   (assoc
+    state
+    ::citation-tags
+    (->> rows
+         (map :df1975-page-ref)
+         set
+         (filter some?)
+         (map (fn [page-ref]
+                {:name (format "Source: DF1975: %s" page-ref)
+                 :description
+                 (format
+                  (str "This form was taken from Cherokee-English"
+                       " Dictionary, Durbin Feeling, 1975: %s.")
+                  page-ref)}))))))
 
 (defn upload-citation-tags
-  [{{:keys [citation-tags]} :tmp existing-tags :tags :as state}]
+  "Upload the `::citation-tags` to the target OLD and set that keyword to the
+  updated tags (which should now have database IDs.)"
+  [{citation-tags ::citation-tags existing-tags ::specs/tags-map :as state}]
   (u/just-then
    (->> citation-tags
-        (filter (fn [tag]
-                  (not ((tags/get-tag-key tag) existing-tags))))
+        (filter (fn [tag] (not ((tags/get-tag-key tag) existing-tags))))
         (tags/upload-tags state))
-   (fn [uploaded-tags] (assoc-in state [:tmp :uploaded-citation-tags]
-                                 uploaded-tags))))
+   (fn [uploaded-tags] (assoc state ::citation-tags uploaded-tags))))
 
 (defn extract-upload-citation-tags
+  "Extract citation tags from the DF 1975 verb rows, and upload them to the
+  target OLD. The result will be the addition of new tags to the
+  `::specs/tags-map` map."
   [state]
   (u/just-then
    (u/err->> state
              extract-citation-tags
              upload-citation-tags)
-   (fn [{{citation-tags :uploaded-citation-tags} :tmp :as state}]
-     (update state :tags merge
+   (fn [{citation-tags ::citation-tags :as state}]
+     (update state ::specs/tags-map merge
              (->> citation-tags
                   (map (fn [tag] [(tags/get-tag-key tag) tag]))
                   (into {}))))))
 
-(defn fetch-verbs-from-worksheet
-  [{{:keys [disable-cache]} :tmp :as state}]
+(defn fetch-worksheet!
+  "Fetch the Google Sheets worksheet and store its data as a `::specs/worksheet`
+  in `state`."
+  [{:keys [::specs/disable-cache] :as state}]
   (u/just
-   (assoc-in
+   (assoc
     state
-    [:tmp :rows]
+    ::specs/worksheet
     (gio/fetch-worksheet-caching {:spreadsheet-title df-1975-sheet-name
                                   :worksheet-title df-1975-worksheet-name
                                   :max-col df-1975-max-col
                                   :max-row df-1975-max-row}
                                  disable-cache))))
 
-(defn row-maps->forms
-  [{{verbs-key :key row-maps :row-maps} :tmp :as state}]
+(defn triage-forms
+  "Separate the errors from the true forms in `::specs/forms`. The errors are
+  treated as warnings and stored in the state under `::specs/warnings`."
+  [{forms ::specs/forms :as state}]
+  (let [{:keys [forms warnings]}
+        (group-by (fn [[_ err]] (if err :warnings :forms)) forms)]
+    (-> state
+        (assoc ::specs/forms (map first forms))
+        (update ::specs/warnings concat (map second warnings)))))
+
+(defn calculate-forms
+  [state]
   (u/just
-   (->> row-maps
-        (row-maps->form-maps state)
-        (group-by (fn [[_ err]] (if err :warnings :verbs)))
-        ((fn [r]
-           (-> state
-                     (assoc-in [:tmp verbs-key] (->> r :verbs (map first)))
-                     (assoc-in [:warnings verbs-key]
-                               (->> r :warnings (map second)))))))))
+   (->> state
+        rows->forms
+        triage-forms)))
+
+(defn upload!
+  [{:keys [::specs/forms] :as state}]
+  (u/just-then
+   (u/maybes->maybe (map (partial verbs/create-verb state) (take 2 forms)))
+   (fn [forms] (update
+                state
+                ::specs/forms-map
+                merge
+                (verbs/verbs-seq->map forms)))))
 
 (defn fetch-upload-verbs-df-1975
-  "Fetch verbs from Google Sheets, upload them to OLD, return state map with
-  verbs-type-key submap updated."
+  "Fetch the DF1975--Master Google Sheet, produce a number of OLD froms by
+  processing that shee, and upload those forms to the target OLD. The
+  `::specs/forms-map` of the state will be updated to contain the uploaded forms
+  (keyed by their IDs)."
   [state & {:keys [disable-cache] :or {disable-cache true}}]
-  (let [verbs-key :df-1975-verbs]
-    (u/err->> (update state :tmp merge {:key :df-1975-verbs
-                                        :disable-cache disable-cache})
-              fetch-verbs-from-worksheet
-              row-vecs->row-maps
-              extract-upload-citation-tags
-              row-maps->forms
-              #_(u/apply-or-error (partial table->forms verbs-key))
-              #_(u/apply-or-error (partial verbs/upload-verbs verbs-key))
-              #_(u/apply-or-error (partial verbs/update-state-verbs state verbs-key)))))
+  (u/err->> (assoc state ::specs/disable-cache disable-cache)
+            fetch-worksheet!
+            calculate-rows
+            extract-upload-citation-tags
+            calculate-forms
+            upload!))

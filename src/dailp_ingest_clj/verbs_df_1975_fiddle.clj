@@ -8,25 +8,31 @@
             [dailp-ingest-clj.syntactic-categories :as syncats]
             [dailp-ingest-clj.sources :as sources]
             [dailp-ingest-clj.speakers :as speakers]
+            [dailp-ingest-clj.specs :as specs]
             [dailp-ingest-clj.tags :as tags]
             [dailp-ingest-clj.utils :as u]
             [dailp-ingest-clj.verbs :as verbs]
             [dailp-ingest-clj.verbs-df-1975 :as df-1975]
             [clojure.pprint :as pprint]
-            [dailp-ingest-clj.resources :as rs]))
+            [dailp-ingest-clj.resources :as rs]
+            [clojure.spec.alpha :as s]))
 
 (def fiddle-state (atom {}))
-(def url "http://127.0.0.1:61001/dailp")
+(def url-old "http://127.0.0.1:61001/dailp")
+(def url "http://127.0.0.1:61001/old")
 (def username "admin")
 (def password "adminA_1")
 
 (def entities-meta
-  {:tag [:tags tags/tags-seq->map]
+  {:tag [::specs/tags-map tags/tags-seq->map]
    :source [:sources sources/sources-seq->map]
    :speaker [:speakers speakers/speakers-seq->map]
    :syntactic-category [:syntactic-categories syncats/scs-seq->map]})
 
 (defn set-cached-entities
+  "Given keyword `entity`, set its pluralized keyword (e.g., `:entities`) to a
+  map from IDs to resource maps. Performs a fetch if the values have not already
+  been cached."
   [entity state]
   (let [[entities ->map] (entity entities-meta)]
     (if-let [cached (entities @fiddle-state)]
@@ -60,10 +66,10 @@
         state (update state :tmp merge
                       {:key verbs-key :disable-cache false})]
     (u/err->> state
-              df-1975/fetch-verbs-from-worksheet
-              df-1975/row-vecs->row-maps
+              df-1975/fetch-worksheet!
+              df-1975/calculate-rows
               df-1975/extract-upload-citation-tags
-              df-1975/row-maps->forms
+              df-1975/calculate-forms
               #_(partial df-1975/table->forms verbs-key))))
 
 (def test-form-map
@@ -134,6 +140,18 @@
         (get-speaker-name-string state form)))
 
 (comment
+
+  (-> (get-test-state "http://127.0.0.1:61001/old" username password)
+      ::specs/tags-map)
+
+  (u/just-then
+   (df-1975/fetch-upload-verbs-df-1975
+    (get-test-state "http://127.0.0.1:61001/old" username password)
+    :disable-cache false)
+   (fn [state]
+     (-> state
+         ::specs/forms-map
+         )))
 
   (speakers/fetch-upload-speakers (get-test-state url username password))
 
@@ -217,7 +235,7 @@
         verbs-key :df-1975-verbs]
     (u/just-then
      (u/err->> state
-               (partial verbs/fetch-verbs-from-worksheet
+               (partial verbs/fetch-worksheet!
                         false
                         df-1975/df-1975-sheet-name
                         df-1975/df-1975-worksheet-name
@@ -248,10 +266,6 @@
           #_(apply (partial map (fn [& args] (str/join "-" args)))))]
     #_[kwixer getter-vecs]
     #_(df-1975/dailp-surface-form-map->form-map state dailp-form-map inflection))
-
-  (some {nil true} [nil nil])
-
-  (some nil? [nil nil])
 
   (verbs/get-translations test-form-map
                           (verbs/get-translation-keys (verbs/get-kwixer :impt)))

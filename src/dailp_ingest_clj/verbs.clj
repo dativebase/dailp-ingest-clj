@@ -219,7 +219,7 @@
 (defn upload-verbs
   "Upload the seq of verb form resource maps to an OLD instance."
   [verbs-key state]
-  (u/seq-rets->ret (map (partial create-verb state) (verbs-key state))))
+  (u/maybes->maybe (map (partial create-verb state) (verbs-key state))))
 
 (defn verbs-seq->map
   "Convert a seq of verb form maps to a mapping from int ids to form maps."

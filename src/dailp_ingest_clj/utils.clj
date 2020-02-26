@@ -1,5 +1,6 @@
 (ns dailp-ingest-clj.utils
   (:require [clojure.java.io :as io]
+            [clojure.pprint :as pprint]
             [clojure.spec.alpha :as spec]
             [clojure.set :refer [subset?]]
             [clojure.string :as string]
@@ -270,6 +271,10 @@
   (if (re-find #"[\.\?!]$" s)
     s
     (str s ".")))
+
+(defn pp-str
+  [x]
+  (with-out-str (pprint/pprint x)))
 
 (comment
 
