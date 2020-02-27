@@ -3,14 +3,14 @@
   https://docs.google.com/spreadsheets/d/18cKXgsfmVhRZ2ud8Cd7YDSHexs1ODHo6fkTPrmnwI1g/edit?usp=sharing."
   (:require [clojure.string :as string]
             [clojure.pprint :as pprint]
+            [clojure.spec.alpha :as s]
             [old-client.models :as ocm :refer [form create-form]]
-            [dailp-ingest-clj.utils :refer [apply-or-error
-                                            empty-str-or-nil->nil
-                                            seq-rets->ret
-                                            str->kw]]
-            [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
+            [dailp-ingest-clj.google-io :as gio]
             [dailp-ingest-clj.resources :refer [create-resource-either]]
-            [dailp-ingest-clj.verbs :refer :all]))
+            [dailp-ingest-clj.specs :as specs]
+            [dailp-ingest-clj.tags :as tags]
+            [dailp-ingest-clj.utils :as u]
+            [dailp-ingest-clj.verbs :as verbs]))
 
 ;; WARNING DF2003 lacks :all-entries-key values for a good subset of its rows ...
 
@@ -176,7 +176,7 @@
   a map whose key/value pairs are from the GSheet and are largely unmodified."
   [state row-map]
   (let [seq-of-form-maps (row-map->seq-of-form-maps row-map)]
-    (map (fn [m] (assoc m :root (get-root-map seq-of-form-maps)))
+    (map (fn [m] (assoc m :root (verbs/get-root-map seq-of-form-maps)))
          seq-of-form-maps)))
 
 (defmulti dailp-form-map->form-map
@@ -193,7 +193,7 @@
 
 (defmethod get-comments :root
   [dailp-form-map kwixer]
-  (get-simple-field-value-comments dailp-form-map root-simple-comments-keys))
+  (verbs/get-simple-field-value-comments dailp-form-map root-simple-comments-keys))
 
 (defn get-feeling-comments
   "Return standard verb form comments: a Feeling 2003 reference and the
@@ -207,18 +207,37 @@
   [dailp-form-map kwixer]
   (get-feeling-comments dailp-form-map kwixer))
 
+(defn page-ref->citation-tag-name
+  [page-ref]
+  (format "Source: DF2003: %s" page-ref))
+
+(defn find-tag-id-by-page-ref
+  [page-ref tags]
+  (:id ((tags/get-tag-key {:name (page-ref->citation-tag-name page-ref)}) tags)))
+
+(defn get-tags
+  "Return a vector of tag IDs for the DF1975 verb form map first parameter.
+  Always include the ingest tag ID; include the citation tag ID if one can be
+  found."
+  [{page-ref :df2003-page-ref}
+   {{{ingest-tag-id :id} :ingest-tag :as tags} ::specs/tags-map :as state}]
+  (if-let [citation-tag-id (find-tag-id-by-page-ref page-ref tags)]
+    [ingest-tag-id citation-tag-id]
+    [ingest-tag-id]))
+
 (defmethod dailp-form-map->form-map :root
   [state dailp-form-map]
-  (let [translations (get-translations dailp-form-map root-translation-keys)
+  (let [translations
+        (verbs/get-translations dailp-form-map verbs/root-translation-keys)
         form
         (create-form
          {::ocm/transcription (:root-morpheme-break dailp-form-map)
           ::ocm/morpheme_break (:root-morpheme-break dailp-form-map)
-          ::ocm/morpheme_gloss (get-morpheme-gloss dailp-form-map translations)
+          ::ocm/morpheme_gloss (verbs/get-morpheme-gloss dailp-form-map translations)
           ::ocm/translations translations
           ::ocm/syntactic_category (get-in state [:syntactic-categories :V :id])
           ::ocm/comments (get-comments dailp-form-map nil)
-          ::ocm/tags [(get-in state [:tags :ingest-tag :id])]})
+          ::ocm/tags (get-tags dailp-form-map state)})
         err (second form)]
     (if err
       [nil {:err err
@@ -257,8 +276,8 @@
   :prs-h-grade that identifies the grammatical inflection of the surface
   verb form."
   [state dailp-form-map inflection]
-  (let [kwixer (get-kwixer inflection)
-        [mb mg] (compute-morpheme-break-gloss
+  (let [kwixer (verbs/get-kwixer inflection)
+        [mb mg] (verbs/compute-morpheme-break-gloss
                  dailp-form-map (get-standard-mb-mg-getter-vecs
                                  kwixer inflection))
         mb (or mb "")
@@ -272,17 +291,17 @@
           ::ocm/transcription (or ((kwixer :syllabary) dailp-form-map) mb)
           ::ocm/morpheme_break mb
           ::ocm/morpheme_gloss mg
-          ::ocm/translations (get-translations dailp-form-map
+          ::ocm/translations (verbs/get-translations dailp-form-map
                                                [(kwixer :translation)])
           ::ocm/syntactic_category (get-in state [:syntactic-categories :S :id])
           ::ocm/comments (get-comments dailp-form-map kwixer)
-          ::ocm/tags [(get-in state [:tags :ingest-tag :id])]})
+          ::ocm/tags (get-tags (:root dailp-form-map) state)})
         err (second form)]
     (if err
       [nil {:err err
             :all-entries-key (get-in dailp-form-map [:root :all-entries-key])
             :inflection inflection
-            :dailp-form-map (succinct! dailp-form-map)}]
+            :dailp-form-map (verbs/succinct! dailp-form-map)}]
       form)))
 
 (defmethod dailp-form-map->form-map :prs
@@ -340,7 +359,7 @@
       (#(select-keys row-map %))
       vals
       ((partial filter identity))
-      not-empty?))
+      verbs/not-empty?))
 
 ;; WARNING DF2003 lacks :all-entries-key values for a good subset of its rows ...
 (defn row-map-has-root-with-key? 
@@ -356,19 +375,12 @@
   (->> dailp-form-maps
        (filter row-map-has-content?)))
 
-(defn row-map->form-maps
-  [state row-map]
-  (->> row-map
+(defn row->forms
+  [state row]
+  (->> row
        (row-map->dailp-form-maps state)
        (remove-bad-dailp-form-maps state)
        (dailp-form-maps->form-maps state)))
-
-(defn row-maps->form-maps
-  [state row-maps]
-  (reduce (fn [agg row-map]
-            (concat agg (row-map->form-maps state row-map)))
-          ()
-          row-maps))
 
 (defn fix-key-less-row
   "Fix row by adding to it all of the root-targeting attr/vals that row lacks
@@ -405,37 +417,121 @@
                [nil []])
        second))
 
-(defn table->forms
-  "Convert a table data structure (vec of vecs of strings) to a seq of OLD forms
-  (maps). The input table is at (verbs-key state). The output seq of form maps
-  will be re-stored at the same key of state. Any errors produced while
-  generating the form maps will be stored as warnings under
-  (get-in state [:warnings verbs-key])."
-  [verbs-key state]
-  [(->> state
-        verbs-key
-        table->row-maps
-        project-roots
-        (row-maps->form-maps state)
-        (group-by (fn [[val err]] (if err :warnings :verbs)))
-        ((fn [r] (-> state
-                     (assoc verbs-key (->> r :verbs (map first)))
-                     (assoc-in [:warnings verbs-key]
-                               (->> r :warnings (map second))))))) nil])
+(defn fetch-worksheet!
+  "Fetch the Google Sheets worksheet and store its data as a `::specs/worksheet`
+  in `state`."
+  [{:keys [::specs/disable-cache] :as state}]
+  (u/just
+   (assoc
+    state
+    ::specs/worksheet
+    (gio/fetch-worksheet-caching {:spreadsheet-title df-2003-sheet-name
+                                  :worksheet-title df-2003-worksheet-name
+                                  :max-col df-2003-max-col
+                                  :max-row df-2003-max-row}
+                                 disable-cache))))
+
+(defn calculate-rows
+  "Given a `::specs/worksheet` vector of vectors, create a `::specs/rows` vector
+  of row maps under `::specs/rows`."
+  [{:keys [::specs/worksheet] :as state}]
+  (u/just
+   (assoc
+    state
+    ::specs/rows
+    (->> worksheet
+         verbs/table->row-maps
+         project-roots))))
+
+(defn extract-citation-tags
+  "Set `::specs/citation-tags` to a sequence of tag maps, one for each unique
+  `:df2003-page-ref` value from the spreadsheet rows."
+  [{:keys [::specs/rows] :as state}]
+  (u/just
+   (assoc
+    state
+    ::specs/citation-tags
+    (->> rows
+         (map :df2003-page-ref)
+         set
+         (filter some?)
+         (map (fn [page-ref]
+                {:name (format "Source: DF2003: %s" page-ref)
+                 :description
+                 (format
+                  (str "This form was taken from"
+                       " A handbook of the Cherokee verb: a preliminary study,"
+                       " Durbin Feeling, 2003: %s.")
+                  page-ref)}))))))
+
+(defn upload-citation-tags
+  "Upload the `::specs/citation-tags` to the target OLD and set that keyword to the
+  updated tags (which should now have database IDs.)"
+  [{citation-tags ::specs/citation-tags existing-tags ::specs/tags-map :as state}]
+  (u/just-then
+   (->> citation-tags
+        (filter (fn [tag] (not ((tags/get-tag-key tag) existing-tags))))
+        (tags/upload-tags state))
+   (fn [uploaded-tags] (assoc state ::specs/citation-tags uploaded-tags))))
+
+(defn extract-upload-citation-tags
+  "Extract citation tags from the DF 2003 verb rows, and upload them to the
+  target OLD. The result will be the addition of new tags to the
+  `::specs/tags-map` map."
+  [state]
+  (u/just-then
+   (u/err->> state
+             extract-citation-tags
+             upload-citation-tags)
+   (fn [{citation-tags ::specs/citation-tags :as state}]
+     (update state ::specs/tags-map merge
+             (->> citation-tags
+                  (map (fn [tag] [(tags/get-tag-key tag) tag]))
+                  (into {}))))))
+
+(defn rows->forms
+  "Return a sequence of Maybe vectors of forms."
+  [{:keys [::specs/rows] :as state}]
+  (printf "Getting forms from %s rows" (count rows))
+  (assoc state
+         ::specs/forms
+         (reduce (fn [acc row] (concat acc (row->forms state row))) () rows)))
+
+(defn triage-forms
+  "Separate the errors from the true forms in `::specs/forms`. The errors are
+  treated as warnings and stored in the state under `::specs/warnings`."
+  [{forms ::specs/forms :as state}]
+  (let [{:keys [forms warnings]}
+        (group-by (fn [[_ err]] (if err :warnings :forms)) forms)]
+    (-> state
+        (assoc ::specs/forms (map first forms))
+        (update ::specs/warnings concat (map second warnings)))))
+
+(defn calculate-forms
+  [state]
+  (u/just
+   (->> state
+        rows->forms
+        triage-forms)))
+
+(defn upload!
+  [{:keys [::specs/forms] :as state}]
+  (u/just-then
+   (u/maybes->maybe (map (partial verbs/create-verb state) forms))
+   (fn [forms] (update
+                state
+                ::specs/forms-map
+                merge
+                (verbs/verbs-seq->map forms)))))
 
 (defn fetch-upload-verbs-df-2003
   "Fetch verbs from Google Sheets, upload them to OLD, return state map with
   verbs-type-key submap updated."
   [state & {:keys [disable-cache] :or {disable-cache true}}]
   (let [verbs-key :df-2003-verbs]
-    (->> state
-         (fetch-verbs-from-worksheet disable-cache
-                                     df-2003-sheet-name
-                                     df-2003-worksheet-name
-                                     df-2003-max-col
-                                     df-2003-max-row
-                                     verbs-key)
-         (apply-or-error (partial table->forms verbs-key))
-         (apply-or-error (partial upload-verbs verbs-key))
-         (apply-or-error (partial update-state-verbs state verbs-key))
-         )))
+    (u/err->> (assoc state ::specs/disable-cache disable-cache)
+              fetch-worksheet!
+              calculate-rows
+              extract-upload-citation-tags
+              calculate-forms
+              upload!)))

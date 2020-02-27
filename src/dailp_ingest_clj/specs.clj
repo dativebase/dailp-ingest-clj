@@ -13,6 +13,7 @@
 (s/def ::tags (s/coll-of ::tag))
 (s/def ::tags-map
   (s/map-of keyword? ::tag))
+(s/def ::citation-tags ::tags)
 
 (s/def ::form map?)
 (s/def ::forms (s/coll-of ::form))

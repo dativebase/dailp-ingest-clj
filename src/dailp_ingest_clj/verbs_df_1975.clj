@@ -11,11 +11,7 @@
             [dailp-ingest-clj.verbs :as verbs]
             [old-client.core :as oc]
             [old-client.models :as ocm]
-            [old-client.resources :as ocr]
-            [clojure.spec.alpha :as spec]))
-
-(s/def ::citation-tags ::specs/tags)
-(s/def ::citation-tags-map ::specs/tags-map)
+            [old-client.resources :as ocr]))
 
 (def df-1975-sheet-name "DF1975--Master")
 (def df-1975-worksheet-name "DF1975--Master")
@@ -444,13 +440,13 @@
          project-roots))))
 
 (defn extract-citation-tags
-  "Set `::citation-tags` to a sequence of tag maps, one for each unique
+  "Set `::specs/citation-tags` to a sequence of tag maps, one for each unique
   `:df1975-page-ref` value from the spreadsheet rows."
   [{:keys [::specs/rows] :as state}]
   (u/just
    (assoc
     state
-    ::citation-tags
+    ::specs/citation-tags
     (->> rows
          (map :df1975-page-ref)
          set
@@ -464,14 +460,14 @@
                   page-ref)}))))))
 
 (defn upload-citation-tags
-  "Upload the `::citation-tags` to the target OLD and set that keyword to the
+  "Upload the `::specs/citation-tags` to the target OLD and set that keyword to the
   updated tags (which should now have database IDs.)"
-  [{citation-tags ::citation-tags existing-tags ::specs/tags-map :as state}]
+  [{citation-tags ::specs/citation-tags existing-tags ::specs/tags-map :as state}]
   (u/just-then
    (->> citation-tags
         (filter (fn [tag] (not ((tags/get-tag-key tag) existing-tags))))
         (tags/upload-tags state))
-   (fn [uploaded-tags] (assoc state ::citation-tags uploaded-tags))))
+   (fn [uploaded-tags] (assoc state ::specs/citation-tags uploaded-tags))))
 
 (defn extract-upload-citation-tags
   "Extract citation tags from the DF 1975 verb rows, and upload them to the
@@ -482,7 +478,7 @@
    (u/err->> state
              extract-citation-tags
              upload-citation-tags)
-   (fn [{citation-tags ::citation-tags :as state}]
+   (fn [{citation-tags ::specs/citation-tags :as state}]
      (update state ::specs/tags-map merge
              (->> citation-tags
                   (map (fn [tag] [(tags/get-tag-key tag) tag]))
@@ -522,7 +518,7 @@
 (defn upload!
   [{:keys [::specs/forms] :as state}]
   (u/just-then
-   (u/maybes->maybe (map (partial verbs/create-verb state) (take 2 forms)))
+   (u/maybes->maybe (map (partial verbs/create-verb state) forms))
    (fn [forms] (update
                 state
                 ::specs/forms-map
@@ -531,7 +527,7 @@
 
 (defn fetch-upload-verbs-df-1975
   "Fetch the DF1975--Master Google Sheet, produce a number of OLD froms by
-  processing that shee, and upload those forms to the target OLD. The
+  processing that sheet, and upload those forms to the target OLD. The
   `::specs/forms-map` of the state will be updated to contain the uploaded forms
   (keyed by their IDs)."
   [state & {:keys [disable-cache] :or {disable-cache true}}]
