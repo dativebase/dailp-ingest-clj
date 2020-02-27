@@ -165,6 +165,15 @@
    :impt impt-keys
    :inf inf-keys})
 
+(defn get-durbin-feeling-speaker
+  [{:keys [speakers]}]
+  (->> speakers
+       vals
+       (filter (fn [{:keys [first_name last_name]}]
+                 (= [first_name last_name] ["Durbin" "Feeling"])))
+       first
+       :id))
+
 (defn row-map->seq-of-form-maps
   [row-map]
   (map (fn [[verb-type keys]]
@@ -237,6 +246,7 @@
           ::ocm/translations translations
           ::ocm/syntactic_category (get-in state [:syntactic-categories :V :id])
           ::ocm/comments (get-comments dailp-form-map nil)
+          ::ocm/speaker (get-durbin-feeling-speaker state)
           ::ocm/tags (get-tags dailp-form-map state)})
         err (second form)]
     (if err
@@ -295,6 +305,7 @@
                                                [(kwixer :translation)])
           ::ocm/syntactic_category (get-in state [:syntactic-categories :S :id])
           ::ocm/comments (get-comments dailp-form-map kwixer)
+          ::ocm/speaker (get-durbin-feeling-speaker state)
           ::ocm/tags (get-tags (:root dailp-form-map) state)})
         err (second form)]
     (if err
