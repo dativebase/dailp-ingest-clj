@@ -232,6 +232,10 @@
        first
        :id))
 
+(defn get-df-1975-source
+  [{sources ::specs/sources-map}]
+  (-> sources :feeling1975cherokee :id))
+
 (defmethod dailp-form-map->form-map :root
   [state dailp-form-map]
   (let [translations (verbs/get-translations dailp-form-map
@@ -243,7 +247,7 @@
           ::ocm/morpheme_gloss (verbs/get-morpheme-gloss dailp-form-map translations)
           ::ocm/translations translations
           ::ocm/syntactic_category (get-in state [:syntactic-categories :V :id])
-          ::ocm/source (get-in state [:sources :feeling1975cherokee :id])
+          ::ocm/source (get-df-1975-source state)
           ::ocm/comments (get-comments dailp-form-map nil)
           ::ocm/speaker (get-durbin-feeling-speaker state)
           ::ocm/tags (get-tags dailp-form-map state)})
@@ -299,7 +303,7 @@
          ::ocm/translations (verbs/get-translations dailp-form-map
                                                     (verbs/get-translation-keys kwixer))
          ::ocm/syntactic_category (get-in state [:syntactic-categories :VP :id])
-         ::ocm/source (get-in state [:sources :feeling1975cherokee :id])
+         ::ocm/source (get-df-1975-source state)
          ::ocm/comments (get-comments dailp-form-map kwixer)
          ::ocm/speaker (get-durbin-feeling-speaker state)
          ::ocm/tags (get-tags (:root dailp-form-map) state)}
@@ -516,9 +520,10 @@
         triage-forms)))
 
 (defn upload!
-  [{:keys [::specs/forms] :as state}]
+  [{:keys [::specs/forms ::specs/upload-limit] :as state}]
   (u/just-then
-   (u/maybes->maybe (map (partial verbs/create-verb state) forms))
+   (u/maybes->maybe (map (partial verbs/create-verb state)
+                         (if upload-limit (take upload-limit forms) forms)))
    (fn [forms] (update
                 state
                 ::specs/forms-map
@@ -530,8 +535,9 @@
   processing that sheet, and upload those forms to the target OLD. The
   `::specs/forms-map` of the state will be updated to contain the uploaded forms
   (keyed by their IDs)."
-  [state & {:keys [disable-cache] :or {disable-cache true}}]
-  (u/err->> (assoc state ::specs/disable-cache disable-cache)
+  [state & {:keys [disable-cache upload-limit] :or {disable-cache true}}]
+  (u/err->> (merge state {::specs/disable-cache disable-cache
+                          ::specs/upload-limit upload-limit})
             fetch-worksheet!
             calculate-rows
             extract-upload-citation-tags

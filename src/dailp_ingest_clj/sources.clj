@@ -5,8 +5,12 @@
             [clj-time.format :as f]
             [clojure.string :as str]
             [dailp-ingest-clj.google-io :as gio]
+            [dailp-ingest-clj.old-io :as old-io]
             [dailp-ingest-clj.resources :as rs]
-            [dailp-ingest-clj.utils :as u]))
+            [dailp-ingest-clj.specs :as specs]
+            [dailp-ingest-clj.utils :as u]
+            [old-client.core :as oc]
+            [clojure.spec.alpha :as spec]))
 
 (def sources-sheet-name "DAILP Sources")
 
@@ -63,7 +67,7 @@
   [state uploaded-sources-ret]
   (u/just
    (update state
-           :sources
+           ::specs/sources
            merge
            (sources-seq->map uploaded-sources-ret))))
 
@@ -75,8 +79,19 @@
        (u/apply-or-error (partial upload-sources state))
        (u/apply-or-error (partial update-state-sources state))))
 
+(def url "http://127.0.0.1:61001/old")
+(def username "admin")
+(def password "adminA_1")
+
 (comment
 
-  (* 8 8)
+  (old-io/get-state (oc/make-old-client {:url url :username username :password password}))
+
+  (fetch-upload-sources
+   (old-io/get-state
+    (oc/make-old-client
+     {:url url
+      :username username
+      :password password})))
 
 )

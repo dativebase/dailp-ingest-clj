@@ -25,7 +25,7 @@
 
 (def entities-meta
   {:tag [::specs/tags-map tags/tags-seq->map]
-   :source [:sources sources/sources-seq->map]
+   :source [::specs/sources-map sources/sources-seq->map]
    :speaker [:speakers speakers/speakers-seq->map]
    :syntactic-category [:syntactic-categories syncats/scs-seq->map]})
 
@@ -147,11 +147,11 @@
   (u/just-then
    (df-1975/fetch-upload-verbs-df-1975
     (get-test-state "http://127.0.0.1:61001/old" username password)
-    :disable-cache false)
+    :disable-cache false
+    :upload-limit 2)
    (fn [state]
      (-> state
-         ::specs/forms-map
-         )))
+         ::specs/forms-map)))
 
   (speakers/fetch-upload-speakers (get-test-state url username password))
 

@@ -224,6 +224,10 @@
   [page-ref tags]
   (:id ((tags/get-tag-key {:name (page-ref->citation-tag-name page-ref)}) tags)))
 
+(defn get-df-2003-source
+  [{sources ::specs/sources-map}]
+  (-> sources :feeling2003handbook :id))
+
 (defn get-tags
   "Return a vector of tag IDs for the DF1975 verb form map first parameter.
   Always include the ingest tag ID; include the citation tag ID if one can be
@@ -245,6 +249,7 @@
           ::ocm/morpheme_gloss (verbs/get-morpheme-gloss dailp-form-map translations)
           ::ocm/translations translations
           ::ocm/syntactic_category (get-in state [:syntactic-categories :V :id])
+          ::ocm/source (get-df-2003-source state)
           ::ocm/comments (get-comments dailp-form-map nil)
           ::ocm/speaker (get-durbin-feeling-speaker state)
           ::ocm/tags (get-tags dailp-form-map state)})
@@ -304,6 +309,7 @@
           ::ocm/translations (verbs/get-translations dailp-form-map
                                                [(kwixer :translation)])
           ::ocm/syntactic_category (get-in state [:syntactic-categories :S :id])
+          ::ocm/source (get-df-2003-source state)
           ::ocm/comments (get-comments dailp-form-map kwixer)
           ::ocm/speaker (get-durbin-feeling-speaker state)
           ::ocm/tags (get-tags (:root dailp-form-map) state)})
@@ -526,9 +532,10 @@
         triage-forms)))
 
 (defn upload!
-  [{:keys [::specs/forms] :as state}]
+  [{:keys [::specs/forms ::specs/upload-limit] :as state}]
   (u/just-then
-   (u/maybes->maybe (map (partial verbs/create-verb state) forms))
+   (u/maybes->maybe (map (partial verbs/create-verb state)
+                         (if upload-limit (take upload-limit forms) forms)))
    (fn [forms] (update
                 state
                 ::specs/forms-map
@@ -538,9 +545,10 @@
 (defn fetch-upload-verbs-df-2003
   "Fetch verbs from Google Sheets, upload them to OLD, return state map with
   verbs-type-key submap updated."
-  [state & {:keys [disable-cache] :or {disable-cache true}}]
+  [state & {:keys [disable-cache upload-limit] :or {disable-cache true}}]
   (let [verbs-key :df-2003-verbs]
-    (u/err->> (assoc state ::specs/disable-cache disable-cache)
+    (u/err->> (merge state {::specs/disable-cache disable-cache
+                            ::specs/upload-limit upload-limit})
               fetch-worksheet!
               calculate-rows
               extract-upload-citation-tags

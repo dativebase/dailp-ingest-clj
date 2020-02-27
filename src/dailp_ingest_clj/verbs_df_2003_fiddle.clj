@@ -18,7 +18,7 @@
 
 (def entities-meta
   {:tag [::specs/tags-map tags/tags-seq->map]
-   :source [:sources sources/sources-seq->map]
+   :source [::specs/sources-map sources/sources-seq->map]
    :speaker [:speakers speakers/speakers-seq->map]
    :syntactic-category [:syntactic-categories syncats/scs-seq->map]})
 
@@ -56,15 +56,20 @@
 
 (comment
 
+  (reset! fiddle-state {})
+
   (-> (get-test-state url username password)
-      ::specs/warnings
+      #_::specs/warnings
       #_::specs/tags-map
+      ::specs/sources-map
+      #_keys
       )
 
   (u/just-then
    (sut/fetch-upload-verbs-df-2003
     (get-test-state url username password)
-    :disable-cache false)
+    :disable-cache false
+    :upload-limit 2)
    (fn [state]
      (-> state
          ::specs/forms-map

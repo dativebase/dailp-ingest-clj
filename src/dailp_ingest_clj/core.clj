@@ -18,7 +18,8 @@
             [dailp-ingest-clj.tags :refer [fetch-upload-tags]]
             [dailp-ingest-clj.utils :refer [apply-or-error]]
             [dailp-ingest-clj.verbs-df-1975 :refer [fetch-upload-verbs-df-1975]]
-            [dailp-ingest-clj.verbs-df-2003 :refer [fetch-upload-verbs-df-2003]]))
+            [dailp-ingest-clj.verbs-df-2003 :refer [fetch-upload-verbs-df-2003]]
+            [dailp-ingest-clj.utils :as u]))
 
 (defn store-state-on-disk
   [state]
@@ -53,25 +54,24 @@
 
 (defn ingest
   [url username password]
-  (let [old-client
-        (make-old-client {:url url
-                          :username username
-                          :password password})]
-    (->> [(get-state old-client) nil]
-         ;; (apply-or-error merge-cached-state)
-         (apply-or-error fetch-upload-tags)
-         (apply-or-error fetch-upload-sources)
-         (apply-or-error fetch-upload-speakers)
-         (apply-or-error fetch-upload-orthographies)
-         (apply-or-error fetch-upload-syntactic-categories)
-         (apply-or-error fetch-upload-ppp-forms)
-         (apply-or-error fetch-upload-pp-forms)
-         (apply-or-error fetch-upload-mod-sfx-forms)
-         (apply-or-error fetch-upload-asp-sfx-forms)
-         (apply-or-error fetch-upload-verbs-df-1975)
-         (apply-or-error fetch-upload-verbs-df-2003)
-         (apply-or-error store-state-on-disk)
-         (apply-or-error summarize-ingest))))
+  (u/err->> (get-state
+             (make-old-client {:url url
+                               :username username
+                               :password password}))
+            #_merge-cached-state
+            fetch-upload-tags
+            fetch-upload-sources
+            fetch-upload-speakers
+            fetch-upload-orthographies
+            fetch-upload-syntactic-categories
+            fetch-upload-ppp-forms
+            fetch-upload-pp-forms
+            fetch-upload-mod-sfx-forms
+            fetch-upload-asp-sfx-forms
+            fetch-upload-verbs-df-1975
+            fetch-upload-verbs-df-2003
+            store-state-on-disk
+            summarize-ingest))
 
 (defn -main
   "Usage:

@@ -9,11 +9,16 @@
 (s/def ::row map?)
 (s/def ::rows (s/coll-of ::row))
 
+(s/def ::source map?)
+(s/def ::sources (s/coll-of ::source))
+(s/def ::sources-map (s/map-of keyword? ::source))
+
 (s/def ::tag map?)
 (s/def ::tags (s/coll-of ::tag))
-(s/def ::tags-map
-  (s/map-of keyword? ::tag))
+(s/def ::tags-map (s/map-of keyword? ::tag))
 (s/def ::citation-tags ::tags)
+
+(s/def ::upload-limit (s/nilable pos-int?))
 
 (s/def ::form map?)
 (s/def ::forms (s/coll-of ::form))
