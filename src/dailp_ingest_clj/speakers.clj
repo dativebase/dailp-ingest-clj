@@ -7,7 +7,8 @@
             [dailp-ingest-clj.google-io :as gio]
             [dailp-ingest-clj.resources :as rs]
             [dailp-ingest-clj.utils :as u]
-            [old-client.resources :as ocr]))
+            [old-client.resources :as ocr]
+            [dailp-ingest-clj.specs :as specs]))
 
 (def speakers-sheet-name "DAILP Speakers")
 
@@ -71,7 +72,7 @@
   [{{speakers :speaker-maps} :tmp :as state}]
   (u/just
    (-> state
-       (assoc :speakers (speakers-seq->map speakers))
+       (assoc ::specs/speakers-map (speakers-seq->map speakers))
        (dissoc :tmp))))
 
 (defn fetch-upload-speakers

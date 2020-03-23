@@ -15,3 +15,5 @@ secrets/
 resources/DAILP-Ingest-6bd06f34c7c6.json
 data.clj
 state.clj
+SECRETS.edn
+tmp/

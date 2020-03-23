@@ -1,49 +1,45 @@
 (ns dailp-ingest-clj.core
   (:gen-class)
   (:require [clojure.edn :as edn]
-            [old-client.core :refer [make-old-client]]
-            [dailp-ingest-clj.aspectual-suffixes :refer
-             [fetch-upload-asp-sfx-forms]]
-            [dailp-ingest-clj.old-io :refer [get-state]]
-            [dailp-ingest-clj.modal-suffixes :refer [fetch-upload-mod-sfx-forms]]
-            [dailp-ingest-clj.orthographies :refer [fetch-upload-orthographies]]
-            [dailp-ingest-clj.prepronominal-prefixes :refer
-             [fetch-upload-ppp-forms]]
-            [dailp-ingest-clj.pronominal-prefixes :refer
-             [fetch-upload-pp-forms fetch-upload-rm-pp-forms]]
-            [dailp-ingest-clj.syntactic-categories :refer
-             [fetch-upload-syntactic-categories]]
-            [dailp-ingest-clj.sources :refer [fetch-upload-sources]]
-            [dailp-ingest-clj.speakers :refer [fetch-upload-speakers]]
-            [dailp-ingest-clj.tags :refer [fetch-upload-tags]]
-            [dailp-ingest-clj.utils :refer [apply-or-error]]
-            [dailp-ingest-clj.verbs-df-1975 :refer [fetch-upload-verbs-df-1975]]
-            [dailp-ingest-clj.verbs-df-2003 :refer [fetch-upload-verbs-df-2003]]
-            [dailp-ingest-clj.utils :as u]))
+            [dailp-ingest-clj.aspectual-suffixes :as aspectual-suffixes]
+            [dailp-ingest-clj.modal-suffixes :as modal-suffixes]
+            [dailp-ingest-clj.old-io :as old-io]
+            [dailp-ingest-clj.orthographies :as orthographies]
+            [dailp-ingest-clj.prepronominal-prefixes :as prepronominal-prefixes]
+            [dailp-ingest-clj.pronominal-prefixes :as pronominal-prefixes]
+            [dailp-ingest-clj.sources :as sources]
+            [dailp-ingest-clj.speakers :as speakers]
+            [dailp-ingest-clj.specs :as specs]
+            [dailp-ingest-clj.syntactic-categories :as syntactic-categories]
+            [dailp-ingest-clj.tags :as tags]
+            [dailp-ingest-clj.utils :as u]
+            [dailp-ingest-clj.verbs-df-1975 :as verbs-df-1975]
+            [dailp-ingest-clj.verbs-df-2003 :as verbs-df-2003]
+            [old-client.core :as oc]
+            [old-client.resources :as ocr]))
 
 (defn store-state-on-disk
   [state]
   (spit "state.clj" (pr-str (select-keys state
-                                         [:tags
-                                          :sources
-                                          :warnings
-                                          :orthographies
-                                          :syntactic-categories])))
-  [state nil])
+                                         [::specs/tags-map
+                                          ::specs/syntactic-categories-map
+                                          ::specs/sources-map
+                                          ::specs/speakers-map
+                                          ::specs/forms-map
+                                          ::specs/warnings
+                                          ::specs/orthographies-map
+                                          ])))
+  (u/just state))
 
 (defn summarize-ingest
   [state]
-  (keys state)
-  {:tags (count (:tags state))
-   :syntactic-categories (count (:syntactic-categories state))
-   :sources (count (:sources state))
-   :mod-sfx-forms (count (:mod-sfx-forms state))
-   :pp-forms (count (:pp-forms state))
-   :asp-sfx-forms (count (:asp-sfx-forms state))
-   :ppp-forms (count (:ppp-forms state))
-   :orthographies (count (:orthographies state))
-   :df-2003-verbs (count (:df-2003-verbs state))
-   :warnings (:warnings state)
+  {::specs/tags-map (count (::specs/tags-map state))
+   ::specs/syntactic-categories-map (count (::specs/syntactic-categories-map state))
+   ::specs/sources-map (count (::specs/sources-map state))
+   ::specs/speakers-map (count (::specs/speakers-map state))
+   ::specs/forms-map (count (::specs/forms-map state))
+   ::specs/orthographies-map (count (:orthographies state))
+   ::specs/warnings (::specs/warnings state)
    :keys (keys state)})
 
 (defn merge-cached-state
@@ -53,24 +49,34 @@
            (edn/read (java.io.PushbackReader. r))) nil]))
 
 (defn ingest
+  "Perform an ingest of the DAILP Cherokee spreadsheet (Google) data into the OLD
+  at `url`, with authentication via the provided credentials."
   [url username password]
-  (u/err->> (get-state
-             (make-old-client {:url url
-                               :username username
-                               :password password}))
-            #_merge-cached-state
-            fetch-upload-tags
-            fetch-upload-sources
-            fetch-upload-speakers
-            fetch-upload-orthographies
-            fetch-upload-syntactic-categories
-            fetch-upload-ppp-forms
-            fetch-upload-pp-forms
-            fetch-upload-mod-sfx-forms
-            fetch-upload-asp-sfx-forms
-            fetch-upload-verbs-df-1975
-            fetch-upload-verbs-df-2003
-            store-state-on-disk
+  (u/err->> (old-io/get-state
+             (oc/make-old-client {:url url
+                                  :username username
+                                  :password password}))
+            #_merge-cached-state ;; TODO: keep commented out ...
+
+            ;; START should be uncommented
+            tags/fetch-upload-tags
+            sources/fetch-upload-sources
+            speakers/fetch-upload-speakers
+            orthographies/fetch-upload-orthographies
+            syntactic-categories/fetch-upload-syntactic-categories
+            prepronominal-prefixes/fetch-upload-ppp-forms
+            pronominal-prefixes/fetch-upload-pp-forms
+            modal-suffixes/fetch-upload-mod-sfx-forms
+            aspectual-suffixes/fetch-upload-asp-sfx-forms
+            verbs-df-1975/fetch-upload-verbs-df-1975
+            verbs-df-2003/fetch-upload-verbs-df-2003
+            ;; (partial (fn [s] (verbs-df-1975/fetch-upload-verbs-df-1975
+            ;;                   s :upload-limit 2)))
+            ;; (partial (fn [s] (verbs-df-2003/fetch-upload-verbs-df-2003
+            ;;                   s :upload-limit 2)))
+            ;; END should be uncommented
+
+            #_store-state-on-disk
             summarize-ingest))
 
 (defn -main

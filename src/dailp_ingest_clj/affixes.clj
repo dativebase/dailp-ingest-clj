@@ -16,7 +16,8 @@
                                             table->sec-of-maps]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
             [dailp-ingest-clj.old-io :refer [get-state]]
-            [clojure.data.csv :as csv])
+            [clojure.data.csv :as csv]
+            [dailp-ingest-clj.specs :as specs])
   (:use [slingshot.slingshot :only [throw+ try+]]))
 
 (defn gloss-is-neg
@@ -44,15 +45,20 @@
   [mb] (format "/%s/" mb))
 
 (defn format-morpheme-break-affix-value
-  "Enclose mb in slash quotes. If there is more than one mb, but the second and
+  "Enclose mb in slash quotes. If there is more than one mb, put the second and
   subsequent into a parenthesized list. Returns a string. E.g., '-óʔi / -o'
   becomes '/-óʔi/ (/-o/)'."
   [mb]
-  (let [[first & others] (->> (string/split mb #"/") (map string/trim))]
-    (if (seq others)
-      (format "%s (%s)" (quote-mb first)
-              (string/join ", " (map quote-mb others)))
-      (quote-mb first))))
+  (if mb
+    (let [[first & others] (->> (string/split mb #"/") (map string/trim))]
+      (if (seq others)
+        (format "%s (%s)" (quote-mb first)
+                (string/join ", " (map quote-mb others)))
+        (quote-mb first)))
+    (let [msg (str "ERROR: failed to construct a morpheme break affix value (nil"
+                   " value supplied)")]
+      (println msg)
+      msg)))
 
 (defn extract-text-references
   "Extract a seq of reference strings, each describing a reference to the
@@ -65,7 +71,9 @@
        ((apply juxt text-attrs)) ;; get seq of vectors of same type
        (map #(if (coll? %) % [%]))  ;; make into vectors if needed
        (apply (partial map vector))  ;; reorganize to seq of text ref tuples (vectors)
-       (filter (fn [[x & _]] ((complement nil?) x)))  ;; remove any vec whose first el is nil
+       ;; remove any vec whose first el is nil or "N/A"
+       (filter (fn [[x & _]]
+                 (and (some? x) (not= "N/A" x))))
        (map (fn [[pp form tag morph-name]]
               (format
                "Compare %s (%s) morpheme %s%s%s."
@@ -204,7 +212,7 @@
 ;; 2-tuple vectors, where the first element is a table column keyword and
 ;; the second is the corresponding keyword tag identifier. The first element
 ;; of each 2-tuple vector should be a key in an affix map. The second element
-;; should be the key of a tag under (:tags state). If the second element is a
+;; should be the key of a tag under (::specs/tags-map state). If the second element is a
 ;; map, its keys should be a category keyword.
 (def prefix-col->tag-idfr
   {:PP [[:allomorph-1 :pp-pre-consonantal]
@@ -275,8 +283,8 @@
                                ::ocm/syntactic_category syncat-id,
                                ::ocm/comments comments,
                                ::ocm/tags
-                               [(get-in state [:tags tag-kw :id])
-                                (get-in state [:tags :ingest-tag :id])]}))))
+                               [(get-in state [::specs/tags-map tag-kw :id])
+                                (get-in state [::specs/tags-map :ingest-tag :id])]}))))
            col-tag-pairs)
           (filter identity))))
 

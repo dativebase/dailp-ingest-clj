@@ -1,5 +1,5 @@
 (ns dailp-ingest-clj.syntactic-categories
-    "Logic for ingesting DAILP syntactic categories from the Google Sheet at
+  "Logic for ingesting DAILP syntactic categories from the Google Sheet at
   https://docs.google.com/spreadsheets/d/159i_Cygdqsnp55QBzqJu7eozxsNEiVIiXhwEzls3q7g/edit?usp=sharing."
   (:require [old-client.models :refer [syntactic-category]]
             [dailp-ingest-clj.utils :refer [seq-rets->ret
@@ -7,7 +7,9 @@
                                             table->sec-of-maps]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
             [dailp-ingest-clj.resources :refer
-             [create-resource-with-unique-attr]]))
+             [create-resource-with-unique-attr]]
+            [dailp-ingest-clj.specs :as specs]
+            [dailp-ingest-clj.utils :as u]))
 
 (def syntactic-categories-sheet-name "DAILP Syntactic Categories")
 
@@ -53,7 +55,11 @@
   "Update state map's :syntactic-categories map with the syntactic categories
   in uploaded-scs-ret."
   [state uploaded-scs-seq]
-  [(assoc state :syntactic-categories (scs-seq->map uploaded-scs-seq)) nil])
+  (u/just
+   (assoc
+    state
+    ::specs/syntactic-categories-map
+    (scs-seq->map uploaded-scs-seq))))
 
 (defn fetch-upload-syntactic-categories
   "Fetch the syntactic-categories from Google Sheets and upload them to an OLD

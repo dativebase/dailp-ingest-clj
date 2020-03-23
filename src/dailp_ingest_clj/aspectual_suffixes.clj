@@ -7,7 +7,9 @@
             [dailp-ingest-clj.resources :refer [upsert-resource]]
             [dailp-ingest-clj.utils :refer [apply-or-error
                                             seq-rets->ret
-                                            table->sec-of-maps]]))
+                                            table->sec-of-maps]]
+            [dailp-ingest-clj.utils :as u]
+            [dailp-ingest-clj.specs :as specs]))
 
 (def asp-sfxs-sheet-name "Aspectual Suffixes")
 
@@ -44,7 +46,7 @@
                                        ::ocm/grammaticality ""}]
                   ::ocm/syntactic_category
                   (get-in state [:syntactic-categories syncatkey :id])
-                  ::ocm/tags [(get-in state [:tags :ingest-tag :id])]})))
+                  ::ocm/tags [(get-in state [::specs/tags-map :ingest-tag :id])]})))
 
 (defn asp-table->sec-of-maps
   "Given an Aspectual affix table (vec of vecs), return an OLD form map. Note:
@@ -83,8 +85,14 @@
 
 (defn update-state-asp-sfx-forms
   [{:keys [state asp-sfx-forms]}]
-  [(assoc state :asp-sfx-forms
-          (into {} (map (fn [f] [(:id f) f]) asp-sfx-forms))) nil])
+  (u/just
+   (update
+    state
+    ::specs/forms-map
+    merge
+    (->> asp-sfx-forms
+         (map (fn [f] [(:id f) f]))
+         (into {})))))
 
 (defn fetch-upload-asp-sfx-forms
   "Fetch ASP forms from GSheets, upload them to OLD, return state map with

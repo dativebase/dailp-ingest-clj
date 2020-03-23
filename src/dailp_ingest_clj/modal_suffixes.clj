@@ -6,7 +6,9 @@
             [dailp-ingest-clj.resources :refer [upsert-resource]]
             [dailp-ingest-clj.utils :refer [apply-or-error
                                             seq-rets->ret
-                                            table->sec-of-maps]]))
+                                            table->sec-of-maps]]
+            [dailp-ingest-clj.utils :as u]
+            [dailp-ingest-clj.specs :as specs]))
 
 (def mod-sfxs-sheet-name "Modal Suffixes")
 
@@ -29,7 +31,7 @@
   [state mod-sfxs]
   (construct-affix-form-maps state mod-sfxs :mod-sfx-form-maps :MOD))
 
-(defn upload-mod-sfxs 
+(defn upload-mod-sfxs
   "Upload the seq of MOD form resource maps (mod-sfxs) to an OLD instance."
   [{:keys [state mod-sfx-form-maps]}]
   (apply-or-error
@@ -40,8 +42,14 @@
 
 (defn update-state-mod-sfx-forms
   [{:keys [state mod-sfx-forms]}]
-  [(assoc state :mod-sfx-forms
-          (into {} (map (fn [f] [(:id f) f]) mod-sfx-forms))) nil])
+  (u/just
+   (update
+    state
+    ::specs/forms-map
+    merge
+    (->> mod-sfx-forms
+         (map (fn [f] [(:id f) f]))
+         (into {})))))
 
 (defn fetch-upload-mod-sfx-forms
   "Fetch MOD forms from GSheets, upload them to OLD, return state map with

@@ -67,7 +67,7 @@
   [state uploaded-sources-ret]
   (u/just
    (update state
-           ::specs/sources
+           ::specs/sources-map
            merge
            (sources-seq->map uploaded-sources-ret))))
 

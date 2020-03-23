@@ -9,7 +9,9 @@
                                             table->sec-of-maps]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
             [dailp-ingest-clj.old-io :refer [get-state]]
-            [dailp-ingest-clj.resources :refer [create-resource-with-unique-attr]]))
+            [dailp-ingest-clj.resources :refer [create-resource-with-unique-attr]]
+            [dailp-ingest-clj.specs :as specs]
+            [dailp-ingest-clj.utils :as u]))
 
 (def orthographies-sheet-name "Orthographic Inventories")
 
@@ -195,9 +197,14 @@
 (defn update-state-with-orthographies
   "Add the :orthogrpahies attribute to the state map; its value is the
   uploaded-orthographies-ret."
-  [state uploaded-orthographies-seq]
-  [(assoc state :orthographies
-          (into {} (map (fn [o] [(:id o) o]) uploaded-orthographies-seq))) nil])
+  [state orthographies]
+  (u/just
+   (assoc
+    state
+    ::specs/orthographies-map
+    (->> orthographies
+         (map (fn [o] [(:id o) o]))
+         (into {})))))
 
 (defn fetch-upload-orthographies
   "Fetch the orthographies from Google Sheets and upload them to an OLD

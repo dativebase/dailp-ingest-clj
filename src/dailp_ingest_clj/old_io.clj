@@ -1,14 +1,13 @@
 (ns dailp-ingest-clj.old-io
-  (:require
-   [old-client.core :refer [make-old-client]]))
-
+  (:require [dailp-ingest-clj.specs :as specs]
+            [old-client.core :refer [make-old-client]]))
 
 (defn get-state
   ([] (get-state (make-old-client)))
   ([old-client]
    {:old-client old-client
-    :created_pronominal_prefixes []
-    :warnings {}
-    :tags {}
-    :syntactic-categories {}
-    :sources {}}))
+    ::specs/warnings {}
+    ::specs/tags-map {}
+    ::specs/forms-map {}
+    ::specs/syntactic-categories-map {}
+    ::specs/sources-map {}}))

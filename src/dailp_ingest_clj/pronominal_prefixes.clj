@@ -12,7 +12,9 @@
             [dailp-ingest-clj.resources :refer [upsert-resource]]
             [dailp-ingest-clj.utils :refer [apply-or-error
                                             seq-rets->ret
-                                            table->sec-of-maps]]))
+                                            table->sec-of-maps]]
+            [dailp-ingest-clj.utils :as u]
+            [dailp-ingest-clj.specs :as specs]))
 
 (def c-pps-sheet-name "Combined Pronominal Prefixes")
 (def c-pps-worksheet-name "Sheet1")
@@ -103,7 +105,7 @@
     (map (fn [pp] (upsert-resource state pp :resource-name :form))
          ab-pp-form-maps))))
 
-(defn upload-rm-pps 
+(defn upload-rm-pps
   "Upload the seq of Reflexive/Middle PP form resource maps (pps) to an OLD instance."
   [{:keys [state rm-pp-form-maps]}]
   (apply-or-error
@@ -114,21 +116,36 @@
 
 (defn update-state-c-pp-forms
   [{:keys [state c-pp-forms]}]
-  [(update state :pp-forms
-           (partial merge
-                    (into {} (map (fn [f] [(:id f) f]) c-pp-forms)))) nil])
+  (u/just
+   (update
+    state
+    ::specs/forms-map
+    merge
+    (->> c-pp-forms
+         (map (fn [f] [(:id f) f]))
+         (into {})))))
 
 (defn update-state-ab-pp-forms
   [{:keys [state ab-pp-forms]}]
-  [(update state :pp-forms
-           (partial merge
-                    (into {} (map (fn [f] [(:id f) f]) ab-pp-forms)))) nil])
+  (u/just
+   (update
+    state
+    ::specs/forms-map
+    merge
+    (->> ab-pp-forms
+         (map (fn [f] [(:id f) f]))
+         (into {})))))
 
 (defn update-state-rm-pp-forms
   [{:keys [state rm-pp-forms]}]
-  [(update state :pp-forms
-           (partial merge
-                    (into {} (map (fn [f] [(:id f) f]) rm-pp-forms)))) nil])
+  (u/just
+   (update
+    state
+    ::specs/forms-map
+    merge
+    (->> rm-pp-forms
+         (map (fn [f] [(:id f) f]))
+         (into {})))))
 
 (defn fetch-upload-c-pp-forms
   [state & {:keys [disable-cache] :or {disable-cache true}}]
@@ -149,8 +166,7 @@
   (->> (fetch-rm-pps-from-worksheet :disable-cache disable-cache)
        (apply-or-error (partial construct-rm-pp-form-maps state))
        (apply-or-error upload-rm-pps)
-       (apply-or-error update-state-rm-pp-forms)
-       ))
+       (apply-or-error update-state-rm-pp-forms)))
 
 (defn fetch-upload-pp-forms
   "Fetch PP forms from GSheets, upload them to OLD, return state map with

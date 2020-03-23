@@ -7,7 +7,9 @@
             [dailp-ingest-clj.resources :refer [upsert-resource]]
             [dailp-ingest-clj.utils :refer [apply-or-error
                                             seq-rets->ret
-                                            table->sec-of-maps]]))
+                                            table->sec-of-maps]]
+            [dailp-ingest-clj.utils :as u]
+            [dailp-ingest-clj.specs :as specs]))
 
 (def ppps-sheet-name "Prepronominal prefixes")
 
@@ -61,8 +63,14 @@
 
 (defn update-state-ppp-forms
   [{:keys [state ppp-forms]}]
-  [(assoc state :ppp-forms
-          (into {} (map (fn [f] [(:id f) f]) ppp-forms))) nil])
+  (u/just
+   (update
+    state
+    ::specs/forms-map
+    merge
+    (->> ppp-forms
+         (map (fn [f] [(:id f) f]))
+         (into {})))))
 
 (defn fetch-upload-ppp-forms
   "Fetch PPP forms from GSheets, upload them to OLD, return state map with

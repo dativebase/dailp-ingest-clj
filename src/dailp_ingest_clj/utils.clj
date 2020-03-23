@@ -1,12 +1,14 @@
 (ns dailp-ingest-clj.utils
-  (:require [clojure.java.io :as io]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.pprint :as pprint]
             [clojure.spec.alpha :as spec]
             [clojure.set :refer [subset?]]
             [clojure.string :as string]
             [clojure.spec.alpha :as s]
             [clojure.data.csv :as csv]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [old-client.core :as oc]))
 
 (s/fdef starts-with-any?
   :args (s/cat :s string? :chrs string?)
@@ -160,13 +162,29 @@
   [nil error])
 
 (defn just-then
-  "Given a maybe (`[just error]`) and a then function that returns a value given
+  "Given a maybe (`[just nothing]`) and a just function that returns a value given
   the `just` as input, return that value, or a nothing (`[nil error]`) if
   `error` is truthy."
-  ([maybe then-fn] (just-then maybe then-fn identity))
-  ([[val error] then-fn error-fn]
+  ([maybe just-fn] (just-then maybe just-fn identity))
+  ([[val error] just-fn nothing-fn]
    (if error
-     (nothing (error-fn error))
+     (nothing (nothing-fn error))
+     (just (just-fn val)))))
+
+(defn just-then-esc
+  ([maybe] (just-then-esc maybe identity identity))
+  ([maybe just-fn] (just-then-esc maybe just-fn identity))
+  ([[val error] just-fn nothing-fn]
+   (if error
+     (nothing-fn error)
+     (just-fn val))))
+
+(defn nothing-then
+  "Just like just-then except the nothing handler function is the only one required."
+  ([maybe nothing-fn] (nothing-then maybe nothing-fn identity))
+  ([[val error] nothing-fn then-fn]
+   (if error
+     (nothing (nothing-fn error))
      (just (then-fn val)))))
 
 ;; See https://adambard.com/blog/acceptable-error-handling-in-clojure/."
@@ -276,7 +294,34 @@
   [x]
   (with-out-str (pprint/pprint x)))
 
+(defn load-edn
+  "Load edn from an io/reader source (filename or io/resource)."
+  [source]
+  (try
+    (with-open [r (io/reader source)]
+      [(edn/read (java.io.PushbackReader. r)) nil])
+    (catch java.io.IOException e
+      [nil (format "Couldn't open '%s': %s\n" source (.getMessage e))])
+    (catch RuntimeException e
+      [nil (format "Error parsing edn file '%s': %s\n" source (.getMessage e))])))
+
+(defn get-old-client
+  "Return an OLD Client for the OLD referenced by `creds-key` under `:olds` of
+  the SECRETS.edn file. Note that this entails a request and session-based
+  authentication to that OLD."
+  [creds-key]
+  (just-then-esc
+   (load-edn "SECRETS.edn")
+   (fn [secrets]
+     (oc/make-old-client (-> secrets :olds creds-key)))))
+
+(def get-local-client (partial get-old-client :local))
+(def get-dailp-dev-client (partial get-old-client :dailp-dev))
+(def get-dailp-prod-client (partial get-old-client :dailp-prod))
+
 (comment
+
+  (load-edn "SECRETS.edn")
 
   (full-stop "abc!")
 

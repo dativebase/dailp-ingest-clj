@@ -10,7 +10,8 @@
                                             table->sec-of-maps]]
             [dailp-ingest-clj.google-io :refer [fetch-worksheet-caching]]
             [dailp-ingest-clj.resources :refer [create-resource-with-unique-attr]]
-            [dailp-ingest-clj.utils :as u]))
+            [dailp-ingest-clj.utils :as u]
+            [dailp-ingest-clj.specs :as specs]))
 
 (def ingest-tag-namespace "dailp-ingest")
 
@@ -87,8 +88,9 @@
   "Update state map's :tags map with the tags in uploaded-tags-ret."
   [state uploaded-tags-ret]
   (let [current-tags (:tags state)]
-    [(assoc state :tags
-            (merge current-tags (tags-seq->map uploaded-tags-ret))) nil]))
+    (u/just
+     (assoc state ::specs/tags-map
+            (merge current-tags (tags-seq->map uploaded-tags-ret))))))
 
 (defn fetch-upload-tags
   "Fetch tags from GSheets, upload them to OLD, return state map with :tags submap

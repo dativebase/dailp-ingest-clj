@@ -219,6 +219,7 @@
   found."
   [{page-ref :df1975-page-ref}
    {{{ingest-tag-id :id} :ingest-tag :as tags} ::specs/tags-map :as state}]
+  (when-not ingest-tag-id (println "ERROR: could not locate ingest tag!!!"))
   (if-let [citation-tag-id (find-tag-id-by-page-ref page-ref tags)]
     [ingest-tag-id citation-tag-id]
     [ingest-tag-id]))
